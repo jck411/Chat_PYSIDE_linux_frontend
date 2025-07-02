@@ -11,6 +11,15 @@ Following PROJECT_RULES.md:
 import os
 import structlog
 from typing import Optional
+from enum import Enum
+
+
+class ThemePreference(Enum):
+    """Theme preference options"""
+
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"  # Future: follow system theme
 
 
 class BackendConfig:
@@ -115,5 +124,62 @@ def set_backend_config(
     return backend_config
 
 
+class AppConfig:
+    """
+    Application-wide configuration including theme preferences.
+
+    Supports environment variables and provides validation.
+    """
+
+    def __init__(self):
+        self.logger = structlog.get_logger(__name__)
+
+        # Theme configuration
+        self.theme_preference = self._load_theme_preference()
+
+        self.logger.info(
+            "Application configuration loaded",
+            config_event="app_config_loaded",
+            module=__name__,
+            theme_preference=self.theme_preference.value,
+        )
+
+    def _load_theme_preference(self) -> ThemePreference:
+        """Load theme preference from environment variable"""
+        env_theme = os.getenv("CHAT_THEME_MODE", "light").lower()
+        try:
+            return ThemePreference(env_theme)
+        except ValueError:
+            self.logger.warning(
+                "Invalid theme preference in environment, defaulting to light",
+                config_event="invalid_theme_env",
+                module=__name__,
+                env_value=env_theme,
+            )
+            return ThemePreference.LIGHT
+
+
+# Global configuration instances
+app_config = AppConfig()
+
+
+def get_app_config() -> AppConfig:
+    """Get the current application configuration"""
+    return app_config
+
+
+def get_theme_preference() -> ThemePreference:
+    """Get current theme preference from configuration"""
+    return app_config.theme_preference
+
+
 # Export only necessary symbols per PROJECT_RULES.md
-__all__ = ["BackendConfig", "get_backend_config", "set_backend_config"]
+__all__ = [
+    "ThemePreference",
+    "BackendConfig",
+    "AppConfig",
+    "get_backend_config",
+    "set_backend_config",
+    "get_app_config",
+    "get_theme_preference",
+]

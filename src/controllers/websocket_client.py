@@ -17,6 +17,7 @@ import uuid
 from typing import Optional
 import structlog
 import websockets
+from websockets.asyncio.client import ClientConnection
 from PySide6.QtCore import QObject, Signal
 
 from ..config import get_backend_config
@@ -54,7 +55,7 @@ class OptimizedWebSocketClient(QObject):
         self.logger = structlog.get_logger(__name__)
 
         # Connection state
-        self._websocket: Optional[websockets.WebSocketServerProtocol] = None
+        self._websocket: Optional[ClientConnection] = None
         self._is_connected = False
         self._should_reconnect = True
         self._reconnect_attempts = 0
@@ -111,14 +112,6 @@ class OptimizedWebSocketClient(QObject):
     async def _connect(self) -> None:
         """Establish WebSocket connection with optimal settings"""
         try:
-            # Optimal WebSocket configuration per optimization guide
-            connect_kwargs = {
-                "ping_interval": 20,  # Keep connection alive
-                "ping_timeout": 10,  # Quick failure detection
-                "max_size": 2**20,  # 1MB max message size
-                "compression": "deflate",  # Reduce bandwidth
-            }
-
             self.logger.info(
                 "Attempting WebSocket connection",
                 connect_event="websocket_connect_start",
@@ -126,8 +119,13 @@ class OptimizedWebSocketClient(QObject):
                 url=self.websocket_url,
             )
 
+            # Optimal WebSocket configuration per optimization guide
             self._websocket = await websockets.connect(
-                self.websocket_url, **connect_kwargs
+                self.websocket_url,
+                ping_interval=20,  # Keep connection alive
+                ping_timeout=10,  # Quick failure detection
+                max_size=2**20,  # 1MB max message size
+                compression="deflate",  # Reduce bandwidth
             )
 
             self._is_connected = True

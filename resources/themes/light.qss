@@ -1,0 +1,79 @@
+/* Light Theme Stylesheet - Material Design 3 */
+/* This file is a placeholder for future QSS-based theming */
+/* Currently using Python-generated stylesheets in theme_applier.py */
+
+/* Main Window */
+QMainWindow {
+    background-color: #FEFBFF;
+    color: #1C1B1F;
+}
+
+/* Text Edit (Chat Display) */
+QTextEdit {
+    background-color: #FFFFFF;
+    color: #1C1B1F;
+    border: 1px solid #CAC4D0;
+    border-radius: 8px;
+    padding: 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+    selection-background-color: #BBDEFB;
+    selection-color: #0D47A1;
+}
+
+QTextEdit:focus {
+    border: 2px solid #1976D2;
+}
+
+/* Line Edit (Message Input) */
+QLineEdit {
+    background-color: #FFFFFF;
+    color: #1C1B1F;
+    border: 1px solid #CAC4D0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    min-height: 20px;
+}
+
+QLineEdit:focus {
+    border: 2px solid #1976D2;
+    background-color: #F3F3F3;
+}
+
+QLineEdit:hover {
+    border-color: #79747E;
+}
+
+/* Buttons */
+QPushButton {
+    background-color: #1976D2;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    min-width: 80px;
+    min-height: 32px;
+}
+
+QPushButton:hover {
+    background-color: #1565C0;
+}
+
+QPushButton:pressed {
+    background-color: #BBDEFB;
+}
+
+QPushButton:disabled {
+    background-color: #F3F3F3;
+    color: #49454F;
+}
+
+/* Labels */
+QLabel {
+    color: #1C1B1F;
+    font-size: 12px;
+}

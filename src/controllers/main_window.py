@@ -16,13 +16,21 @@ from PySide6.QtWidgets import (
     QWidget,
     QTextEdit,
     QLineEdit,
-    QPushButton,
     QLabel,
 )
 from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtCore import Qt
 
 from .websocket_client import OptimizedWebSocketClient
 from ..config import get_backend_config
+from ..themes import get_theme_manager, ThemeMode, MaterialIconButton
+
+# Import compiled resources
+try:
+    from .. import resources_rc  # type: ignore
+except ImportError:
+    # Resources not compiled yet, will use fallback
+    resources_rc = None  # type: ignore
 
 
 class MainWindowController(QMainWindow):
@@ -43,6 +51,10 @@ class MainWindowController(QMainWindow):
         # Get backend configuration
         self.backend_config = get_backend_config()
 
+        # Initialize theme manager
+        self.theme_manager = get_theme_manager()
+        self._setup_theme_signals()
+
         # Initialize WebSocket client
         self.websocket_client = OptimizedWebSocketClient()
         self._setup_websocket_signals()
@@ -55,6 +67,9 @@ class MainWindowController(QMainWindow):
         # Setup UI
         self._setup_ui()
 
+        # Apply initial theme
+        self.theme_manager.apply_current_theme()
+
         # Auto-connect on startup
         self.websocket_client.connect_to_backend()
 
@@ -63,6 +78,7 @@ class MainWindowController(QMainWindow):
             window_event="main_window_init",
             module=__name__,
             backend_config=str(self.backend_config),
+            theme_info=self.theme_manager.get_theme_info(),
         )
 
     def _setup_ui(self) -> None:
@@ -75,10 +91,21 @@ class MainWindowController(QMainWindow):
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        # Backend info
+        # Header area with backend info and icons
+        header_layout = QHBoxLayout()
+
+        # Left side: Backend info
         backend_info = QLabel(f"Backend: {self.backend_config.websocket_url}")
         backend_info.setStyleSheet("color: #888888; font-size: 10px; padding: 5px;")
-        layout.addWidget(backend_info)
+        header_layout.addWidget(backend_info)
+
+        # Spacer to push icons to the right
+        header_layout.addStretch()
+
+        # Right side: Material Design icons
+        self._setup_header_icons(header_layout)
+
+        layout.addLayout(header_layout)
 
         # Connection status
         self.status_label = QLabel("Connecting...")
@@ -89,31 +116,29 @@ class MainWindowController(QMainWindow):
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
         self.chat_display.setFont(QFont("Consolas", 10))
-        self.chat_display.setStyleSheet(
-            """
-            QTextEdit {
-                background-color: #1e1e1e;
-                color: #ffffff;
-                border: 1px solid #333333;
-                padding: 10px;
-            }
-        """
-        )
         layout.addWidget(self.chat_display)
 
-        # Input area
+        # Input area with proper alignment
         input_layout = QHBoxLayout()
+        input_layout.setSpacing(8)  # Add spacing between input and button
 
         self.message_input = QLineEdit()
         self.message_input.setPlaceholderText("Type your message...")
         self.message_input.returnPressed.connect(self._send_message)
         input_layout.addWidget(self.message_input)
 
-        self.send_button = QPushButton("Send")
-        self.send_button.clicked.connect(self._send_message)
-        input_layout.addWidget(self.send_button)
+        # Material Design send icon button
+        self.send_icon_button = MaterialIconButton(
+            icon_resource_path=":/icons/send.svg", size=24, tooltip="Send Message"
+        )
+        self.send_icon_button.clicked.connect(self._send_message)
+        input_layout.addWidget(self.send_icon_button)
+        input_layout.setAlignment(self.send_icon_button, Qt.AlignmentFlag.AlignCenter)
 
         layout.addLayout(input_layout)
+
+        # Update icon themes
+        self._update_icon_themes()
 
     def _setup_websocket_signals(self) -> None:
         """Connect WebSocket signals for immediate UI updates"""
@@ -128,6 +153,89 @@ class MainWindowController(QMainWindow):
             self._on_connection_status_changed
         )
         self.websocket_client.error_occurred.connect(self._on_error)
+
+    def _setup_theme_signals(self) -> None:
+        """Connect theme manager signals for real-time theme updates"""
+        self.theme_manager.theme_mode_changed.connect(self._on_theme_changed)
+
+    def _setup_header_icons(self, header_layout: QHBoxLayout) -> None:
+        """Setup Material Design icons in the header"""
+        # Theme toggle icon button
+        if self.theme_manager.current_mode == ThemeMode.LIGHT:
+            theme_icon_path = ":/icons/dark_mode.svg"
+            theme_tooltip = "Switch to Dark Mode"
+        else:
+            theme_icon_path = ":/icons/light_mode.svg"
+            theme_tooltip = "Switch to Light Mode"
+
+        self.theme_icon_button = MaterialIconButton(
+            icon_resource_path=theme_icon_path, size=24, tooltip=theme_tooltip
+        )
+        self.theme_icon_button.clicked.connect(self._toggle_theme)
+        header_layout.addWidget(self.theme_icon_button)
+
+        # Settings icon button (inactive for now)
+        self.settings_icon_button = MaterialIconButton(
+            icon_resource_path=":/icons/settings.svg",
+            size=24,
+            tooltip="Settings (Coming Soon)",
+        )
+        self.settings_icon_button.setEnabled(False)  # Inactive as requested
+        header_layout.addWidget(self.settings_icon_button)
+
+    def _update_icon_themes(self) -> None:
+        """Update all icon button themes"""
+        current_config = self.theme_manager.current_config
+
+        # Update theme toggle icon
+        if hasattr(self, "theme_icon_button"):
+            self.theme_icon_button.update_theme(current_config)
+            # Update icon path and tooltip based on current theme
+            if self.theme_manager.current_mode == ThemeMode.LIGHT:
+                self.theme_icon_button._icon_resource_path = ":/icons/dark_mode.svg"
+                self.theme_icon_button.setToolTip("Switch to Dark Mode")
+            else:
+                self.theme_icon_button._icon_resource_path = ":/icons/light_mode.svg"
+                self.theme_icon_button.setToolTip("Switch to Light Mode")
+            self.theme_icon_button.update_theme(current_config)  # Refresh with new path
+
+        # Update settings icon
+        if hasattr(self, "settings_icon_button"):
+            self.settings_icon_button.update_theme(current_config)
+
+        # Update send icon
+        if hasattr(self, "send_icon_button"):
+            self.send_icon_button.update_theme(current_config)
+
+    def _toggle_theme(self) -> None:
+        """Toggle between light and dark themes"""
+        self.theme_manager.toggle_theme()
+
+        self.logger.info(
+            "Theme toggled by user",
+            theme_event="user_theme_toggle",
+            module=__name__,
+            new_theme=self.theme_manager.current_mode.value,
+        )
+
+    def _update_theme_toggle_button(self) -> None:
+        """Update theme toggle button text based on current theme"""
+        if self.theme_manager.current_mode == ThemeMode.LIGHT:
+            self.theme_icon_button.setToolTip("🌙 Dark Mode")
+        else:
+            self.theme_icon_button.setToolTip("☀️ Light Mode")
+
+    def _on_theme_changed(self, theme_mode: ThemeMode) -> None:
+        """Handle theme change events"""
+        # Update icon themes
+        self._update_icon_themes()
+
+        self.logger.info(
+            "Theme changed in UI",
+            theme_event="ui_theme_changed",
+            module=__name__,
+            theme_mode=theme_mode.value,
+        )
 
     def _on_connection_established(self, client_id: str) -> None:
         """Handle connection established with client ID"""
@@ -204,13 +312,13 @@ class MainWindowController(QMainWindow):
                 f"✅ Connected to {self.backend_config.host}:{self.backend_config.port} - Ready for streaming"
             )
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
-            self.send_button.setEnabled(True)
+            self.send_icon_button.setEnabled(True)
         else:
             self.status_label.setText(
                 f"❌ Disconnected from {self.backend_config.host}:{self.backend_config.port} - Reconnecting..."
             )
             self.status_label.setStyleSheet("color: red; font-weight: bold;")
-            self.send_button.setEnabled(False)
+            self.send_icon_button.setEnabled(False)
 
     def _on_error(self, error_message: str) -> None:
         """Handle WebSocket errors"""

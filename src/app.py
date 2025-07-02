@@ -15,7 +15,7 @@ import asyncio
 import argparse
 import structlog
 from PySide6.QtWidgets import QApplication
-import qasync
+import qasync  # type: ignore
 
 try:
     # Try relative imports first (when run as module)

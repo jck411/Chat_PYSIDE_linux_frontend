@@ -51,7 +51,7 @@ Backend (LLM + WebSocket) ←→ PySide6 Frontend (streaming display)
 ### Key Optimizations
 
 - **Direct chunk processing**: No artificial batching delays
-- **Dedicated event loop**: Background thread for WebSocket operations  
+- **Dedicated event loop**: Background thread for WebSocket operations
 - **Persistent connections**: Single connection per session
 - **Immediate UI updates**: Thread-safe Qt signals for sub-10ms latency
 
@@ -60,7 +60,7 @@ Backend (LLM + WebSocket) ←→ PySide6 Frontend (streaming display)
 ### Backend Connection
 
 The frontend automatically connects to your backend. Default configuration:
-- **Host**: `192.168.1.223` 
+- **Host**: `192.168.1.223`
 - **Port**: `8000`
 - **WebSocket URL**: `ws://192.168.1.223:8000/ws/chat`
 - **Health Check**: `http://192.168.1.223:8000/health`

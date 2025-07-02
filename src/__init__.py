@@ -1,1 +1,1 @@
-# Chat PySide Frontend - Main Package 
+# Chat PySide Frontend - Main Package

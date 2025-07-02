@@ -20,14 +20,14 @@ import qasync  # type: ignore
 try:
     # Try relative imports first (when run as module)
     from .controllers.main_window import MainWindowController
-    from .config import set_backend_config, get_backend_config
+    from .config import get_config_manager
 except ImportError:
     # Fall back to absolute imports (when run directly)
     import os
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     from src.controllers.main_window import MainWindowController
-    from src.config import set_backend_config, get_backend_config
+    from src.config import get_config_manager
 
 
 def setup_logging() -> None:
@@ -72,7 +72,7 @@ def setup_exception_handler() -> None:
 def parse_args() -> argparse.Namespace:
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(
-        description="Lightning-fast PySide6 chat frontend with WebSocket streaming"
+        description="PySide6 chat frontend with WebSocket streaming"
     )
     parser.add_argument(
         "--host",
@@ -96,17 +96,39 @@ def main() -> None:
     # Parse command line arguments
     args = parse_args()
 
+    # Get configuration manager
+    config_manager = get_config_manager()
+
     # Update configuration if arguments provided
     if args.host or args.port or args.ssl:
-        set_backend_config(host=args.host, port=args.port, use_ssl=args.ssl)
+        # Create a temporary backend profile for command line args
+        profile_name = "Command Line Override"
+        active_profile = config_manager.get_active_backend_profile()
+        if active_profile:
+            host = args.host or active_profile.host
+            port = args.port or active_profile.port
+            use_ssl = args.ssl if args.ssl else active_profile.use_ssl
+        else:
+            host = args.host or "localhost"
+            port = args.port or 8000
+            use_ssl = args.ssl or False
 
-    config = get_backend_config()
+        config_manager.add_backend_profile(
+            "cli_override",
+            profile_name,
+            host,
+            port,
+            use_ssl,
+            "Temporary profile from command line arguments",
+        )
+        config_manager.set_active_backend("cli_override")
+
     logger = structlog.get_logger(__name__)
     logger.info(
         "Starting Chat PySide Frontend",
         app_event="app_start",
         module=__name__,
-        backend_url=config.websocket_url,
+        backend_url=config_manager.get_websocket_url(),
     )
 
     # Create QApplication (filter out our custom args)

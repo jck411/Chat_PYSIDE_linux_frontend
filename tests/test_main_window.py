@@ -28,10 +28,7 @@ class TestMainWindowController:
 
     def test_main_window_initialization(self, main_window, mock_websocket_client):
         """Test that main window initializes correctly."""
-        assert (
-            main_window.windowTitle()
-            == "Chat PySide Frontend - Lightning Fast Streaming"
-        )
+        assert main_window.windowTitle() == "Chat PySide Frontend"
         assert main_window.websocket_client is not None
 
         # Verify WebSocket client was set up
@@ -41,7 +38,7 @@ class TestMainWindowController:
         """Test that all UI components are created."""
         assert hasattr(main_window, "chat_display")
         assert hasattr(main_window, "message_input")
-        assert hasattr(main_window, "send_button")
+        assert hasattr(main_window, "send_icon_button")
         assert hasattr(main_window, "status_label")
 
         # Verify components are properly configured
@@ -180,7 +177,7 @@ class TestMainWindowController:
         assert "Connected" in status_text
 
         # Verify send button is enabled
-        assert main_window.send_button.isEnabled()
+        assert main_window.send_icon_button.isEnabled()
 
     def test_on_connection_status_changed_disconnected(self, main_window):
         """Test connection status change to disconnected."""
@@ -191,7 +188,7 @@ class TestMainWindowController:
         assert "Disconnected" in status_text
 
         # Verify send button is disabled
-        assert not main_window.send_button.isEnabled()
+        assert not main_window.send_icon_button.isEnabled()
 
     def test_on_error(self, main_window):
         """Test error handler."""

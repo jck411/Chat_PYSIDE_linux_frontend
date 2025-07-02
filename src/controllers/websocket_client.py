@@ -1,5 +1,5 @@
 """
-Optimized WebSocket Client for Lightning-Fast Text Streaming
+Optimized WebSocket Client for Chat Frontend
 
 Following WebSocket_Streaming_Optimizations.md:
 - Persistent connection management with auto-reconnect
@@ -20,7 +20,7 @@ import websockets
 from websockets.asyncio.client import ClientConnection
 from PySide6.QtCore import QObject, Signal
 
-from ..config import get_backend_config
+from ..config import get_config_manager
 
 
 class OptimizedWebSocketClient(QObject):
@@ -47,8 +47,8 @@ class OptimizedWebSocketClient(QObject):
         super().__init__()
         # Use configuration if no URL provided
         if websocket_url is None:
-            config = get_backend_config()
-            self.websocket_url = config.websocket_url
+            config_manager = get_config_manager()
+            self.websocket_url = config_manager.get_websocket_url()
         else:
             self.websocket_url = websocket_url
 
@@ -103,6 +103,39 @@ class OptimizedWebSocketClient(QObject):
         self._should_reconnect = False
         if self._loop and not self._loop.is_closed():
             asyncio.run_coroutine_threadsafe(self._disconnect(), self._loop)
+
+    def update_backend_url(self, new_url: Optional[str] = None) -> None:
+        """Update WebSocket URL and reconnect"""
+        if new_url is None:
+            # Get current URL from config manager
+            config_manager = get_config_manager()
+            new_url = config_manager.get_websocket_url()
+
+        if new_url != self.websocket_url:
+            self.logger.info(
+                "Updating WebSocket URL",
+                ws_event="url_update",
+                module=__name__,
+                old_url=self.websocket_url,
+                new_url=new_url,
+            )
+
+            self.websocket_url = new_url
+
+            # Disconnect and reconnect with new URL
+            self.disconnect_from_backend()
+            # Small delay to ensure clean disconnect
+            if self._loop and not self._loop.is_closed():
+                asyncio.run_coroutine_threadsafe(
+                    self._reconnect_with_delay(), self._loop
+                )
+
+    async def _reconnect_with_delay(self) -> None:
+        """Reconnect after a short delay"""
+        await asyncio.sleep(1)  # Wait for clean disconnect
+        self._should_reconnect = True
+        self._reconnect_attempts = 0  # Reset reconnect attempts
+        await self._connect()
 
     def send_message(self, message: str) -> None:
         """Send message to WebSocket server (non-blocking)"""

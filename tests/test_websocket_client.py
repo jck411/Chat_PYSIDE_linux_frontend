@@ -109,19 +109,20 @@ class TestWebSocketClientMocked:
 
         # Mock config and background loop
         with patch(
-            "src.controllers.websocket_client.get_backend_config"
-        ) as mock_config, patch.object(
+            "src.controllers.websocket_client.get_config_manager"
+        ) as mock_config_manager, patch.object(
             OptimizedWebSocketClient, "_start_background_loop"
         ):
-            # Mock config
-            mock_config.return_value.websocket_url = "ws://default.example.com/ws"
+            # Mock config manager
+            mock_manager = mock_config_manager.return_value
+            mock_manager.get_websocket_url.return_value = "ws://default.example.com/ws"
 
             # Create client without URL (should use config)
             client = OptimizedWebSocketClient()
 
             # Verify URL from config was used
             assert client.websocket_url == "ws://default.example.com/ws"
-            mock_config.assert_called_once()
+            mock_config_manager.assert_called_once()
 
     def test_websocket_client_threading_prevention(self):
         """Test that we can safely prevent threading during tests."""

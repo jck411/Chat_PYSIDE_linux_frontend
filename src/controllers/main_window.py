@@ -1,5 +1,5 @@
 """
-Main Window Controller for Lightning-Fast Chat Streaming
+Main Window Controller for Chat Frontend
 
 Following PROJECT_RULES.md:
 - ≤ 150 LOC with ≤ 2 public symbols per UI controller
@@ -22,8 +22,9 @@ from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtCore import Qt
 
 from .websocket_client import OptimizedWebSocketClient
-from ..config import get_backend_config
+from ..config import get_config_manager
 from ..themes import get_theme_manager, ThemeMode, MaterialIconButton
+from ..ui import SettingsDialog
 
 # Import compiled resources
 try:
@@ -48,8 +49,8 @@ class MainWindowController(QMainWindow):
         super().__init__()
         self.logger = structlog.get_logger(__name__)
 
-        # Get backend configuration
-        self.backend_config = get_backend_config()
+        # Get configuration manager
+        self.config_manager = get_config_manager()
 
         # Initialize theme manager
         self.theme_manager = get_theme_manager()
@@ -77,13 +78,13 @@ class MainWindowController(QMainWindow):
             "Main window initialized",
             window_event="main_window_init",
             module=__name__,
-            backend_config=str(self.backend_config),
+            backend_url=self.config_manager.get_websocket_url(),
             theme_info=self.theme_manager.get_theme_info(),
         )
 
     def _setup_ui(self) -> None:
         """Setup minimal, fast UI for chat streaming"""
-        self.setWindowTitle("Chat PySide Frontend - Lightning Fast Streaming")
+        self.setWindowTitle("Chat PySide Frontend")
         self.setGeometry(100, 100, 800, 600)
 
         # Central widget
@@ -172,13 +173,13 @@ class MainWindowController(QMainWindow):
         self.theme_icon_button.clicked.connect(self._toggle_theme)
         header_layout.addWidget(self.theme_icon_button)
 
-        # Settings icon button (inactive for now)
+        # Settings icon button
         self.settings_icon_button = MaterialIconButton(
             icon_resource_path=":/icons/settings.svg",
             size=24,
-            tooltip="Settings (Coming Soon)",
+            tooltip="Settings",
         )
-        self.settings_icon_button.setEnabled(False)  # Inactive as requested
+        self.settings_icon_button.clicked.connect(self._open_settings)
         header_layout.addWidget(self.settings_icon_button)
 
     def _update_icon_themes(self) -> None:
@@ -306,15 +307,18 @@ class MainWindowController(QMainWindow):
     def _on_connection_status_changed(self, is_connected: bool) -> None:
         """Update connection status indicator"""
         if is_connected:
-            self.status_label.setText(
-                f"✅ Connected: {self.backend_config.websocket_url}"
-            )
+            websocket_url = self.config_manager.get_websocket_url()
+            self.status_label.setText(f"✅ Connected: {websocket_url}")
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
             self.send_icon_button.setEnabled(True)
         else:
-            self.status_label.setText(
-                f"❌ Disconnected from {self.backend_config.host}:{self.backend_config.port} - Reconnecting..."
-            )
+            active_profile = self.config_manager.get_active_backend_profile()
+            if active_profile:
+                self.status_label.setText(
+                    f"❌ Disconnected from {active_profile.host}:{active_profile.port} - Reconnecting..."
+                )
+            else:
+                self.status_label.setText("❌ No backend configured - Reconnecting...")
             self.status_label.setStyleSheet("color: red; font-weight: bold;")
             self.send_icon_button.setEnabled(False)
 
@@ -327,6 +331,46 @@ class MainWindowController(QMainWindow):
             error=error_message,
         )
         self.chat_display.append(f"\n❌ Error: {error_message}")
+
+    def _open_settings(self) -> None:
+        """Open the settings dialog"""
+        settings_dialog = SettingsDialog(self)
+
+        # Connect settings dialog signals
+        settings_dialog.backend_changed.connect(self._on_backend_changed)
+        settings_dialog.theme_changed.connect(self._on_settings_theme_changed)
+
+        # Show dialog
+        result = settings_dialog.exec()
+
+        self.logger.info(
+            "Settings dialog closed",
+            ui_event="settings_dialog_closed",
+            module=__name__,
+            result="accepted" if result else "rejected",
+        )
+
+    def _on_backend_changed(self, profile_id: str) -> None:
+        """Handle backend profile change from settings"""
+        self.logger.info(
+            "Backend changed from settings",
+            config_event="backend_changed_from_settings",
+            module=__name__,
+            profile_id=profile_id,
+        )
+
+        # Update WebSocket URL and reconnect
+        self.websocket_client.update_backend_url()
+
+    def _on_settings_theme_changed(self, theme_name: str) -> None:
+        """Handle theme change from settings"""
+        self.logger.info(
+            "Theme changed from settings",
+            theme_event="theme_changed_from_settings",
+            module=__name__,
+            theme=theme_name,
+        )
+        # Theme change is handled automatically by the theme manager
 
     def _send_message(self) -> None:
         """Send user message and prepare for streaming response"""

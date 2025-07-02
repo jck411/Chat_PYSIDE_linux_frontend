@@ -1,7 +1,7 @@
 [project]
 name = "chat-pyside-frontend"
 version = "0.1.0"
-description = "Lightning-fast PySide6 chat frontend with optimized WebSocket streaming"
+description = "PySide6 chat frontend with optimized WebSocket streaming"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -9,6 +9,13 @@ dependencies = [
     "qasync>=0.27.1",
     "structlog>=25.4.0",
     "websockets>=15.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+    "pytest-qt>=4.4.0",
 ]
 
 [project.scripts]

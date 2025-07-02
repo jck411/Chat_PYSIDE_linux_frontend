@@ -1,172 +1,125 @@
-"""Tests for the configuration module."""
+"""Tests for the configuration system."""
 
 import os
-import pytest
 from unittest.mock import patch
 
-from src.config import BackendConfig, get_backend_config, set_backend_config
+from src.config import (
+    get_config_manager,
+    ThemePreference,
+    BackendProfile,
+    EnvConfig,
+)
 
 
-class TestBackendConfig:
-    """Test BackendConfig dataclass."""
+class TestEnvConfig:
+    """Test environment configuration."""
 
-    def test_backend_config_creation(self):
-        """Test creating a BackendConfig instance."""
-        config = BackendConfig(host="localhost", port=8080, use_ssl=True)
+    def test_env_config_creation(self):
+        """Test creating an EnvConfig instance."""
+        with patch.dict(os.environ, {}, clear=True):
+            config = EnvConfig()
+            assert config.speechgram_api_key is None
 
-        assert config.host == "localhost"
-        assert config.port == 8080
-        assert config.use_ssl is True
+    def test_env_config_with_api_key(self):
+        """Test loading API key from environment."""
+        env_vars = {"SPEECHGRAM_API_KEY": "test-key"}
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            config = EnvConfig()
+            assert config.speechgram_api_key == "test-key"
+
+    def test_has_speechgram_api_key(self):
+        """Test checking for API key presence."""
+        with patch.dict(os.environ, {}, clear=True):
+            config = EnvConfig()
+            assert not config.has_speechgram_api_key()
+
+        with patch.dict(os.environ, {"SPEECHGRAM_API_KEY": "test-key"}, clear=True):
+            config = EnvConfig()
+            assert config.has_speechgram_api_key()
+
+
+class TestBackendProfile:
+    """Test backend profile functionality."""
+
+    def test_backend_profile_creation(self):
+        """Test creating a backend profile."""
+        profile = BackendProfile(
+            name="Test Profile",
+            host="localhost",
+            port=8000,
+            use_ssl=False,
+            description="Test description",
+        )
+
+        assert profile.name == "Test Profile"
+        assert profile.host == "localhost"
+        assert profile.port == 8000
+        assert not profile.use_ssl
+        assert profile.description == "Test description"
 
     def test_websocket_url_without_ssl(self):
         """Test WebSocket URL generation without SSL."""
-        config = BackendConfig(host="example.com", port=8000, use_ssl=False)
+        profile = BackendProfile(
+            name="Test", host="example.com", port=8000, use_ssl=False, description=""
+        )
 
-        assert config.websocket_url == "ws://example.com:8000/ws/chat"
+        assert profile.websocket_url == "ws://example.com:8000/ws/chat"
 
     def test_websocket_url_with_ssl(self):
         """Test WebSocket URL generation with SSL."""
-        config = BackendConfig(host="example.com", port=8443, use_ssl=True)
+        profile = BackendProfile(
+            name="Test", host="example.com", port=8443, use_ssl=True, description=""
+        )
 
-        assert config.websocket_url == "wss://example.com:8443/ws/chat"
+        assert profile.websocket_url == "wss://example.com:8443/ws/chat"
 
     def test_health_url_without_ssl(self):
         """Test health URL generation without SSL."""
-        config = BackendConfig(host="example.com", port=8000, use_ssl=False)
+        profile = BackendProfile(
+            name="Test", host="example.com", port=8000, use_ssl=False, description=""
+        )
 
-        assert config.health_url == "http://example.com:8000/health"
+        assert profile.health_url == "http://example.com:8000/health"
 
     def test_health_url_with_ssl(self):
         """Test health URL generation with SSL."""
-        config = BackendConfig(host="example.com", port=8443, use_ssl=True)
+        profile = BackendProfile(
+            name="Test", host="example.com", port=8443, use_ssl=True, description=""
+        )
 
-        assert config.health_url == "https://example.com:8443/health"
-
-    def test_base_url_without_ssl(self):
-        """Test base URL generation without SSL."""
-        config = BackendConfig(host="example.com", port=8000, use_ssl=False)
-
-        assert config.base_url == "http://example.com:8000"
-
-    def test_base_url_with_ssl(self):
-        """Test base URL generation with SSL."""
-        config = BackendConfig(host="example.com", port=8443, use_ssl=True)
-
-        assert config.base_url == "https://example.com:8443"
-
-    def test_config_validation_empty_host(self):
-        """Test validation fails with empty host."""
-        with patch.dict(os.environ, {"CHAT_BACKEND_HOST": ""}, clear=True):
-            with pytest.raises(ValueError, match="Backend host cannot be empty"):
-                BackendConfig(host="", port=8000, use_ssl=False)
-
-    def test_config_validation_invalid_port(self):
-        """Test validation fails with invalid port."""
-        with pytest.raises(ValueError, match="Invalid port number"):
-            BackendConfig(host="example.com", port=70000, use_ssl=False)
-
-    def test_config_validation_negative_port(self):
-        """Test validation fails with negative port."""
-        with pytest.raises(ValueError, match="Invalid port number"):
-            BackendConfig(host="example.com", port=-1, use_ssl=False)
+        assert profile.health_url == "https://example.com:8443/health"
 
 
-class TestGetBackendConfig:
-    """Test get_backend_config function."""
+class TestConfigManagerSingleton:
+    """Test the config manager singleton."""
 
-    def test_get_backend_config_default(self):
-        """Test getting default configuration."""
-        with patch.dict(os.environ, {}, clear=True):
-            config = BackendConfig()  # Create fresh instance
+    def test_get_config_manager_singleton(self):
+        """Test that get_config_manager returns the same instance."""
+        manager1 = get_config_manager()
+        manager2 = get_config_manager()
 
-            assert config.host == "192.168.1.223"
-            assert config.port == 8000
-            assert config.use_ssl is False
+        assert manager1 is manager2
 
-    def test_get_backend_config_from_env(self):
-        """Test getting configuration from environment variables."""
-        env_vars = {
-            "CHAT_BACKEND_HOST": "test.example.com",
-            "CHAT_BACKEND_PORT": "9000",
-            "CHAT_BACKEND_SSL": "true",
-        }
+    def test_config_manager_basic_functionality(self):
+        """Test basic config manager functionality."""
+        manager = get_config_manager()
 
-        with patch.dict(os.environ, env_vars, clear=True):
-            config = BackendConfig()
+        # Test that we can get basic configuration
+        assert manager.get_theme_preference() in [
+            ThemePreference.LIGHT,
+            ThemePreference.DARK,
+            ThemePreference.SYSTEM,
+        ]
 
-            assert config.host == "test.example.com"
-            assert config.port == 9000
-            assert config.use_ssl is True
+        # Test that we can get backend profile
+        profile = manager.get_active_backend_profile()
+        assert profile is not None
+        assert hasattr(profile, "host")
+        assert hasattr(profile, "port")
+        assert hasattr(profile, "use_ssl")
 
-    def test_get_backend_config_ssl_false_values(self):
-        """Test SSL configuration with various false values."""
-        false_values = ["false", "False", "FALSE", "0", "no", ""]
-
-        for false_value in false_values:
-            with patch.dict(os.environ, {"CHAT_BACKEND_SSL": false_value}, clear=True):
-                config = BackendConfig()
-                assert config.use_ssl is False, f"Failed for value: {false_value}"
-
-    def test_get_backend_config_invalid_port_env(self):
-        """Test handling of invalid port values from environment."""
-        with patch.dict(os.environ, {"CHAT_BACKEND_PORT": "invalid"}, clear=True):
-            # Should raise ValueError when trying to convert to int
-            with pytest.raises(ValueError):
-                BackendConfig()
-
-
-class TestSetBackendConfig:
-    """Test set_backend_config function."""
-
-    def test_set_backend_config_all_params(self):
-        """Test setting all configuration parameters."""
-        config = set_backend_config(host="new.example.com", port=9999, use_ssl=True)
-
-        assert config.host == "new.example.com"
-        assert config.port == 9999
-        assert config.use_ssl is True
-
-        # Verify global config was updated
-        global_config = get_backend_config()
-        assert global_config.host == "new.example.com"
-        assert global_config.port == 9999
-        assert global_config.use_ssl is True
-
-    def test_set_backend_config_partial_params(self):
-        """Test setting only some configuration parameters."""
-        # First set a baseline
-        set_backend_config(host="baseline.com", port=8000, use_ssl=False)
-
-        # Then update only host (others should use environment defaults)
-        with patch.dict(
-            os.environ,
-            {
-                "CHAT_BACKEND_HOST": "baseline.com",
-                "CHAT_BACKEND_PORT": "8000",
-                "CHAT_BACKEND_SSL": "false",
-            },
-            clear=True,
-        ):
-            config = set_backend_config(host="updated.com")
-
-            assert config.host == "updated.com"
-            assert config.port == 8000  # From environment
-            assert config.use_ssl is False  # From environment
-
-    def test_set_backend_config_none_values(self):
-        """Test setting configuration with None values (should use environment)."""
-        with patch.dict(
-            os.environ,
-            {
-                "CHAT_BACKEND_HOST": "env.example.com",
-                "CHAT_BACKEND_PORT": "7777",
-                "CHAT_BACKEND_SSL": "true",
-            },
-            clear=True,
-        ):
-            config = set_backend_config(host=None, port=None, use_ssl=None)
-
-            # Should use environment values
-            assert config.host == "env.example.com"
-            assert config.port == 7777
-            assert config.use_ssl is True
+        # Test that we can get websocket URL
+        url = manager.get_websocket_url()
+        assert url.startswith(("ws://", "wss://"))
+        assert "/ws/chat" in url

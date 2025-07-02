@@ -1,10 +1,10 @@
-# Chat PySide Frontend - Lightning Fast Streaming
+# Chat PySide Frontend
 
 Ultra-fast PySide6 chat frontend optimized for real-time WebSocket text streaming.
 
 ## Features
 
-- **Lightning-fast streaming**: Sub-10ms chunk latency from server to UI
+- **Fast streaming**: Optimized chunk latency from server to UI
 - **Persistent WebSocket connections**: No connection overhead
 - **Optimized for LLM streaming**: Direct chunk processing without batching delays
 - **Auto-reconnection**: Exponential backoff strategy for robust connections

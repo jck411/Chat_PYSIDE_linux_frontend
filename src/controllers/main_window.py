@@ -85,7 +85,12 @@ class MainWindowController(QMainWindow):
     def _setup_ui(self) -> None:
         """Setup minimal, fast UI for chat streaming"""
         self.setWindowTitle("Chat PySide Frontend")
-        self.setGeometry(100, 100, 800, 600)
+
+        # Load saved window geometry from configuration
+        geometry = self.config_manager.get_window_geometry()
+        self.setGeometry(
+            geometry["x"], geometry["y"], geometry["width"], geometry["height"]
+        )
 
         # Central widget
         central_widget = QWidget()
@@ -395,6 +400,26 @@ class MainWindowController(QMainWindow):
             message_length=len(message),
         )
 
+    def resizeEvent(self, event) -> None:
+        """Handle window resize events and save geometry"""
+        super().resizeEvent(event)
+
+        # Save current window geometry to configuration
+        geometry = self.geometry()
+        self.config_manager.set_window_geometry(
+            geometry.width(), geometry.height(), geometry.x(), geometry.y()
+        )
+
+    def moveEvent(self, event) -> None:
+        """Handle window move events and save geometry"""
+        super().moveEvent(event)
+
+        # Save current window geometry to configuration
+        geometry = self.geometry()
+        self.config_manager.set_window_geometry(
+            geometry.width(), geometry.height(), geometry.x(), geometry.y()
+        )
+
     def closeEvent(self, event) -> None:
         """Clean shutdown"""
         self.logger.info(
@@ -402,6 +427,13 @@ class MainWindowController(QMainWindow):
             shutdown_event="main_window_shutdown",
             module=__name__,
         )
+
+        # Save final window geometry before closing
+        geometry = self.geometry()
+        self.config_manager.set_window_geometry(
+            geometry.width(), geometry.height(), geometry.x(), geometry.y()
+        )
+
         self.websocket_client.cleanup()
         event.accept()
 

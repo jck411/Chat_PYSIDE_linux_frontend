@@ -91,13 +91,16 @@ class MainWindowController(QMainWindow):
         self.setCentralWidget(central_widget)
         layout = QVBoxLayout(central_widget)
 
-        # Header area with backend info and icons
+        # Header area with connection status and icons
         header_layout = QHBoxLayout()
+        header_layout.setSpacing(10)  # Improved spacing between elements
 
-        # Left side: Backend info
-        backend_info = QLabel(f"Backend: {self.backend_config.websocket_url}")
-        backend_info.setStyleSheet("color: #888888; font-size: 10px; padding: 5px;")
-        header_layout.addWidget(backend_info)
+        # Left side: Connection status
+        self.status_label = QLabel("Connecting...")
+        self.status_label.setStyleSheet(
+            "color: orange; font-weight: bold; font-size: 11px; padding: 5px;"
+        )
+        header_layout.addWidget(self.status_label)
 
         # Spacer to push icons to the right
         header_layout.addStretch()
@@ -106,11 +109,6 @@ class MainWindowController(QMainWindow):
         self._setup_header_icons(header_layout)
 
         layout.addLayout(header_layout)
-
-        # Connection status
-        self.status_label = QLabel("Connecting...")
-        self.status_label.setStyleSheet("color: orange; font-weight: bold;")
-        layout.addWidget(self.status_label)
 
         # Chat display - optimized for streaming
         self.chat_display = QTextEdit()
@@ -309,7 +307,7 @@ class MainWindowController(QMainWindow):
         """Update connection status indicator"""
         if is_connected:
             self.status_label.setText(
-                f"✅ Connected to {self.backend_config.host}:{self.backend_config.port} - Ready for streaming"
+                f"✅ Connected: {self.backend_config.websocket_url}"
             )
             self.status_label.setStyleSheet("color: green; font-weight: bold;")
             self.send_icon_button.setEnabled(True)

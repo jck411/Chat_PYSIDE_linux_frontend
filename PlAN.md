@@ -50,12 +50,13 @@
 - [x] Type-safe fixtures with proper annotations
 - [x] Mock strategies avoiding external dependencies
 
-### Test Coverage Status (as of 2024-12-31)
+### Test Coverage Status (as of 2024-03-19)
 **Individual Module Coverage with Detailed Metrics:**
 - ✅ src/app.py: 7 tests passed - **64% coverage** (64/64 statements, 23 missed) - Comprehensive test coverage
 - ✅ src/config.py: 17 tests passed - **97% coverage** (39/39 statements, 1 missed) - Full configuration testing
 - ✅ src/controllers/main_window.py: 15 tests passed - **100% coverage** (98/98 statements, 0 missed) - Excellent UI testing
 - ✅ src/controllers/websocket_client.py: 10 tests passed - **27% coverage** (220/220 statements, 161 missed) - Public interface tested (async/threading complexity handled appropriately)
+  - Note: Method `disconnect()` renamed to `disconnect_from_backend()` to resolve QObject method conflict
 
 **Coverage Analysis:**
 ```

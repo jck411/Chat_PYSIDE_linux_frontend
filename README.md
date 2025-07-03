@@ -81,5 +81,5 @@ uv run python scripts/build_resources.py
 
 ## Rules
 
-- [GENERAL_RULES.md](./GENERAL_RULES.md) - Language-agnostic engineering rules
 - [PROJECT_RULES.md](./PROJECT_RULES.md) - PySide6-specific project rules
+- General engineering rules are configured in VS Code Cursor settings

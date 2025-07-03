@@ -1,6 +1,6 @@
 # Project Rules - PySide6 Smart Home Chat Frontend
 
-> This document extends [GENERAL_RULES.md](./GENERAL_RULES.md) with PySide6-specific requirements.
+> This document contains PySide6-specific requirements. General engineering rules are configured in VS Code Cursor settings.
 
 ## Python & PySide6 Versions
 

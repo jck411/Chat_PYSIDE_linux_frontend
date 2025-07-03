@@ -9,9 +9,8 @@ Following PROJECT_RULES.md:
 """
 
 import structlog
-from typing import Dict
-from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QObject
+from PySide6.QtWidgets import QApplication
 
 from .theme_config import ThemeConfig, ThemeMode
 
@@ -30,7 +29,7 @@ class ThemeApplier(QObject):
     def __init__(self) -> None:
         super().__init__()
         self.logger = structlog.get_logger(__name__)
-        self._stylesheet_cache: Dict[ThemeMode, str] = {}
+        self._stylesheet_cache: dict[ThemeMode, str] = {}
 
     def apply_theme_to_application(self, theme_config: ThemeConfig) -> None:
         """Apply theme to entire application"""

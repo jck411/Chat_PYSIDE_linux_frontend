@@ -9,9 +9,10 @@ Following PROJECT_RULES.md:
 """
 
 import os
-import structlog
-from typing import Optional, Any
 from pathlib import Path
+from typing import Any
+
+import structlog
 
 
 class EnvConfig:
@@ -22,7 +23,7 @@ class EnvConfig:
     Never logs actual key values per PROJECT_RULES.md security guidelines.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = structlog.get_logger(__name__)
 
         # Load API keys from environment
@@ -40,7 +41,7 @@ class EnvConfig:
             config_path_override=bool(self.config_path_override),
         )
 
-    def get_speechgram_api_key(self) -> Optional[str]:
+    def get_speechgram_api_key(self) -> str | None:
         """
         Get Speechgram API key for Speech-to-Text functionality.
 
@@ -53,7 +54,7 @@ class EnvConfig:
         """Check if Speechgram API key is configured"""
         return self.speechgram_api_key is not None
 
-    def get_config_path_override(self) -> Optional[Path]:
+    def get_config_path_override(self) -> Path | None:
         """
         Get custom config file path if specified in environment.
 
@@ -91,7 +92,7 @@ class EnvConfig:
 
 
 # Global instance
-_env_config: Optional[EnvConfig] = None
+_env_config: EnvConfig | None = None
 
 
 def get_env_config() -> EnvConfig:

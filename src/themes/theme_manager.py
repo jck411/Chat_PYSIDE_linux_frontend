@@ -9,12 +9,13 @@ Following PROJECT_RULES.md:
 """
 
 import os
-import structlog
 from typing import Optional
-from PySide6.QtCore import QObject, Signal, QSettings
 
-from .theme_config import ThemeMode, ThemeConfig, get_theme_config
+import structlog
+from PySide6.QtCore import QObject, QSettings, Signal
+
 from .theme_applier import ThemeApplier
+from .theme_config import ThemeConfig, ThemeMode, get_theme_config
 
 
 class ThemeManager(QObject):

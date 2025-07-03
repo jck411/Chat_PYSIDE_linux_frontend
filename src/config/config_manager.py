@@ -8,13 +8,14 @@ Following PROJECT_RULES.md:
 - Structured logging
 """
 
-import structlog
-from typing import Optional, Dict, Any
 from pathlib import Path
+from typing import Any
 
-from .env_config import get_env_config
-from .user_config import get_user_config, ThemePreference
+import structlog
+
 from .backend_profiles import BackendProfile, BackendProfileManager
+from .env_config import get_env_config
+from .user_config import ThemePreference, get_user_config
 
 
 class ConfigManager:
@@ -25,7 +26,7 @@ class ConfigManager:
     user preferences, and backend profiles.
     """
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         self.logger = structlog.get_logger(__name__)
 
         # Initialize configuration components
@@ -86,7 +87,7 @@ class ConfigManager:
             )
 
     # Environment Configuration Methods
-    def get_speechgram_api_key(self) -> Optional[str]:
+    def get_speechgram_api_key(self) -> str | None:
         """Get Speechgram API key from environment"""
         return self.env_config.get_speechgram_api_key()
 
@@ -110,7 +111,7 @@ class ConfigManager:
             theme=theme.value,
         )
 
-    def get_window_geometry(self) -> Dict[str, int]:
+    def get_window_geometry(self) -> dict[str, int]:
         """Get window geometry as dictionary"""
         geometry = self.user_config.get_window_geometry()
         return {
@@ -128,11 +129,11 @@ class ConfigManager:
         self.user_config.set_window_geometry(geometry)
 
     # Backend Configuration Methods
-    def get_active_backend_profile(self) -> Optional[BackendProfile]:
+    def get_active_backend_profile(self) -> BackendProfile | None:
         """Get the currently active backend profile"""
         return self.backend_manager.get_active_profile()
 
-    def get_active_backend_id(self) -> Optional[str]:
+    def get_active_backend_id(self) -> str | None:
         """Get the currently active backend profile ID"""
         return self.backend_manager.get_active_profile_id()
 
@@ -155,7 +156,7 @@ class ConfigManager:
         host: str,
         port: int,
         use_ssl: bool,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> None:
         """Add a new backend profile"""
         profile = BackendProfile(
@@ -176,7 +177,7 @@ class ConfigManager:
         host: str,
         port: int,
         use_ssl: bool,
-        description: Optional[str] = None,
+        description: str | None = None,
     ) -> None:
         """Update an existing backend profile"""
         profile = BackendProfile(
@@ -185,32 +186,32 @@ class ConfigManager:
         self.backend_manager.update_profile(profile_id, profile)
         self._save_backend_profiles()
 
-    def list_backend_profiles(self) -> Dict[str, str]:
+    def list_backend_profiles(self) -> dict[str, str]:
         """Get mapping of profile IDs to names"""
         return self.backend_manager.list_profile_names()
 
-    def get_backend_profile(self, profile_id: str) -> Optional[BackendProfile]:
+    def get_backend_profile(self, profile_id: str) -> BackendProfile | None:
         """Get a specific backend profile"""
         return self.backend_manager.get_profile(profile_id)
 
     # Convenience Methods for Current Backend
-    def get_websocket_url(self) -> Optional[str]:
+    def get_websocket_url(self) -> str | None:
         """Get WebSocket URL for active backend"""
         profile = self.get_active_backend_profile()
         return profile.websocket_url if profile else None
 
-    def get_health_url(self) -> Optional[str]:
+    def get_health_url(self) -> str | None:
         """Get health check URL for active backend"""
         profile = self.get_active_backend_profile()
         return profile.health_url if profile else None
 
-    def get_base_url(self) -> Optional[str]:
+    def get_base_url(self) -> str | None:
         """Get base URL for active backend"""
         profile = self.get_active_backend_profile()
         return profile.base_url if profile else None
 
     # Validation and Status Methods
-    def validate_all(self, require_speechgram: bool = False) -> Dict[str, Any]:
+    def validate_all(self, require_speechgram: bool = False) -> dict[str, Any]:
         """
         Validate all configuration components.
 
@@ -220,7 +221,7 @@ class ConfigManager:
         Returns:
             Dictionary with comprehensive validation results
         """
-        validation_results: Dict[str, Any] = {
+        validation_results: dict[str, Any] = {
             "status": "valid",
             "components": {},
             "issues": [],
@@ -275,7 +276,7 @@ class ConfigManager:
 
         except Exception as e:
             validation_results["status"] = "error"
-            validation_results["issues"].append(f"Validation error: {str(e)}")
+            validation_results["issues"].append(f"Validation error: {e!s}")
 
             self.logger.error(
                 "Configuration validation failed",
@@ -286,7 +287,7 @@ class ConfigManager:
 
         return validation_results
 
-    def get_status_summary(self) -> Dict[str, Any]:
+    def get_status_summary(self) -> dict[str, Any]:
         """Get a summary of current configuration status"""
         active_profile = self.get_active_backend_profile()
 
@@ -317,10 +318,10 @@ class ConfigManager:
 
 
 # Global instance
-_config_manager: Optional[ConfigManager] = None
+_config_manager: ConfigManager | None = None
 
 
-def get_config_manager(config_path: Optional[Path] = None) -> ConfigManager:
+def get_config_manager(config_path: Path | None = None) -> ConfigManager:
     """Get the global configuration manager instance"""
     global _config_manager
     if _config_manager is None:

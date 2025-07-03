@@ -10,24 +10,26 @@ Following PROJECT_RULES.md:
 - Async-first design for WebSocket streaming
 """
 
-import sys
-import asyncio
 import argparse
+import asyncio
+import sys
+from types import TracebackType
+
+import qasync
 import structlog
 from PySide6.QtWidgets import QApplication
-import qasync  # type: ignore
 
 try:
     # Try relative imports first (when run as module)
-    from .controllers.main_window import MainWindowController
     from .config import get_config_manager
+    from .controllers.main_window import MainWindowController
 except ImportError:
     # Fall back to absolute imports (when run directly)
     import os
 
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from src.controllers.main_window import MainWindowController
     from src.config import get_config_manager
+    from src.controllers.main_window import MainWindowController
 
 
 def setup_logging() -> None:
@@ -54,7 +56,11 @@ def setup_exception_handler() -> None:
     """Install global exception hook per PROJECT_RULES.md"""
     logger = structlog.get_logger(__name__)
 
-    def handle_exception(exc_type, exc_value, exc_traceback):
+    def handle_exception(
+        exc_type: type[BaseException],
+        exc_value: BaseException,
+        exc_traceback: TracebackType | None,
+    ) -> None:
         if issubclass(exc_type, KeyboardInterrupt):
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
@@ -156,7 +162,7 @@ def main() -> None:
         loop.run_forever()
 
 
-def run_app():
+def run_app() -> None:
     """Entry point for the application"""
     try:
         main()

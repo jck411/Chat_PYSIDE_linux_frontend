@@ -18,16 +18,18 @@ class TestOptimizedWebSocketClientModule:
 
     def test_websocket_client_is_qobject(self):
         """Test that WebSocket client inherits from QObject."""
-        from src.controllers.websocket_client import OptimizedWebSocketClient
         from PySide6.QtCore import QObject
+
+        from src.controllers.websocket_client import OptimizedWebSocketClient
 
         # Check class hierarchy without instantiation
         assert issubclass(OptimizedWebSocketClient, QObject)
 
     def test_websocket_client_has_required_signals(self):
         """Test that WebSocket client class has required signals."""
-        from src.controllers.websocket_client import OptimizedWebSocketClient
         from PySide6.QtCore import Signal
+
+        from src.controllers.websocket_client import OptimizedWebSocketClient
 
         # Check class attributes without instantiation
         assert hasattr(OptimizedWebSocketClient, "chunk_received")
@@ -62,8 +64,9 @@ class TestOptimizedWebSocketClientModule:
 
     def test_websocket_client_constructor_signature(self):
         """Test WebSocket client constructor signature."""
-        from src.controllers.websocket_client import OptimizedWebSocketClient
         import inspect
+
+        from src.controllers.websocket_client import OptimizedWebSocketClient
 
         # Get constructor signature
         sig = inspect.signature(OptimizedWebSocketClient.__init__)
@@ -108,10 +111,11 @@ class TestWebSocketClientMocked:
         from src.controllers.websocket_client import OptimizedWebSocketClient
 
         # Mock config and background loop
-        with patch(
-            "src.controllers.websocket_client.get_config_manager"
-        ) as mock_config_manager, patch.object(
-            OptimizedWebSocketClient, "_start_background_loop"
+        with (
+            patch(
+                "src.controllers.websocket_client.get_config_manager"
+            ) as mock_config_manager,
+            patch.object(OptimizedWebSocketClient, "_start_background_loop"),
         ):
             # Mock config manager
             mock_manager = mock_config_manager.return_value

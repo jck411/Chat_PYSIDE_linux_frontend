@@ -8,11 +8,12 @@ Following PROJECT_RULES.md:
 """
 
 import json
-import structlog
-from typing import Optional, Dict, Any
-from pathlib import Path
+from dataclasses import asdict, dataclass, field
 from enum import Enum
-from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Any
+
+import structlog
 
 
 class ThemePreference(Enum):
@@ -32,7 +33,7 @@ class WindowGeometry:
     x: int = 100
     y: int = 100
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate geometry values"""
         if self.width < 400 or self.height < 300:
             raise ValueError("Window size too small (minimum 400x300)")
@@ -45,16 +46,10 @@ class UIConfig:
     """UI configuration settings"""
 
     theme: ThemePreference = ThemePreference.LIGHT
-    window_geometry: WindowGeometry = None  # type: ignore
-    backend_profiles: Dict[str, Any] = None  # type: ignore
+    window_geometry: WindowGeometry = field(default_factory=WindowGeometry)
+    backend_profiles: dict[str, Any] = field(default_factory=dict)
 
-    def __post_init__(self) -> None:
-        if self.window_geometry is None:
-            self.window_geometry = WindowGeometry()
-        if self.backend_profiles is None:
-            self.backend_profiles = {}
-
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization"""
         return {
             "theme": self.theme.value,
@@ -63,7 +58,7 @@ class UIConfig:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "UIConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "UIConfig":
         """Create from dictionary (JSON deserialization)"""
         theme_str = data.get("theme", "light")
         try:
@@ -93,7 +88,7 @@ class UserConfig:
     DEFAULT_CONFIG_DIR = Path.home() / ".config" / "chat-frontend"
     DEFAULT_CONFIG_FILE = "config.json"
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         self.logger = structlog.get_logger(__name__)
 
         # Determine config file path
@@ -137,7 +132,7 @@ class UserConfig:
                 )
                 return
 
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             # Load version
@@ -203,7 +198,7 @@ class UserConfig:
                 config_path=str(self.config_path),
                 error=str(e),
             )
-            raise IOError(f"Failed to save configuration: {e}")
+            raise OSError(f"Failed to save configuration: {e}") from e
 
     def get_theme_preference(self) -> ThemePreference:
         """Get current theme preference"""
@@ -248,7 +243,7 @@ class UserConfig:
             module=__name__,
         )
 
-    def get_config_info(self) -> Dict[str, Any]:
+    def get_config_info(self) -> dict[str, Any]:
         """Get configuration information for debugging"""
         return {
             "version": self._version,
@@ -258,14 +253,14 @@ class UserConfig:
             "window_geometry": asdict(self.ui_config.window_geometry),
         }
 
-    def validate(self) -> Dict[str, Any]:
+    def validate(self) -> dict[str, Any]:
         """
         Validate current configuration.
 
         Returns:
             Dictionary with validation results
         """
-        validation_results: Dict[str, Any] = {
+        validation_results: dict[str, Any] = {
             "status": "valid",
             "issues": [],
             "recommendations": [],
@@ -296,10 +291,10 @@ class UserConfig:
 
 
 # Global instance
-_user_config: Optional[UserConfig] = None
+_user_config: UserConfig | None = None
 
 
-def get_user_config(config_path: Optional[Path] = None) -> UserConfig:
+def get_user_config(config_path: Path | None = None) -> UserConfig:
     """Get the global user configuration instance"""
     global _user_config
     if _user_config is None:
@@ -316,8 +311,8 @@ def get_user_config(config_path: Optional[Path] = None) -> UserConfig:
 # Export only necessary symbols per PROJECT_RULES.md
 __all__ = [
     "ThemePreference",
-    "WindowGeometry",
     "UIConfig",
     "UserConfig",
+    "WindowGeometry",
     "get_user_config",
 ]

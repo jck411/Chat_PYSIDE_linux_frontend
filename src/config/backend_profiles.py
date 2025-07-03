@@ -7,10 +7,11 @@ Following PROJECT_RULES.md:
 - Structured logging
 """
 
-import structlog
-from typing import Optional, Dict, Any
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from enum import Enum
+from typing import Any
+
+import structlog
 
 
 class ConnectionType(Enum):
@@ -35,7 +36,7 @@ class BackendProfile:
     host: str
     port: int
     use_ssl: bool
-    description: Optional[str] = None
+    description: str | None = None
 
     def __post_init__(self) -> None:
         """Validate profile data after initialization"""
@@ -73,12 +74,12 @@ class BackendProfile:
         protocol = "https" if self.use_ssl else "http"
         return f"{protocol}://{self.host}:{self.port}"
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert profile to dictionary for JSON serialization"""
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "BackendProfile":
+    def from_dict(cls, data: dict[str, Any]) -> "BackendProfile":
         """Create profile from dictionary (JSON deserialization)"""
         return cls(**data)
 
@@ -97,8 +98,8 @@ class BackendProfileManager:
 
     def __init__(self) -> None:
         self.logger = structlog.get_logger(__name__)
-        self._profiles: Dict[str, BackendProfile] = {}
-        self._active_profile_id: Optional[str] = None
+        self._profiles: dict[str, BackendProfile] = {}
+        self._active_profile_id: str | None = None
 
         # Create default profile
         self._create_default_profile()
@@ -185,17 +186,17 @@ class BackendProfileManager:
             profile_id=profile_id,
         )
 
-    def get_profile(self, profile_id: str) -> Optional[BackendProfile]:
+    def get_profile(self, profile_id: str) -> BackendProfile | None:
         """Get a specific backend profile by ID"""
         return self._profiles.get(profile_id)
 
-    def get_active_profile(self) -> Optional[BackendProfile]:
+    def get_active_profile(self) -> BackendProfile | None:
         """Get the currently active backend profile"""
         if self._active_profile_id:
             return self._profiles.get(self._active_profile_id)
         return None
 
-    def get_active_profile_id(self) -> Optional[str]:
+    def get_active_profile_id(self) -> str | None:
         """Get the currently active profile ID"""
         return self._active_profile_id
 
@@ -224,11 +225,11 @@ class BackendProfileManager:
             profile=str(self._profiles[profile_id]),
         )
 
-    def list_profiles(self) -> Dict[str, BackendProfile]:
+    def list_profiles(self) -> dict[str, BackendProfile]:
         """Get all available backend profiles"""
         return self._profiles.copy()
 
-    def list_profile_names(self) -> Dict[str, str]:
+    def list_profile_names(self) -> dict[str, str]:
         """Get mapping of profile IDs to names"""
         return {pid: profile.name for pid, profile in self._profiles.items()}
 
@@ -259,7 +260,7 @@ class BackendProfileManager:
             profile=str(profile),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert all profiles to dictionary for JSON serialization"""
         return {
             "active_profile": self._active_profile_id,
@@ -268,7 +269,7 @@ class BackendProfileManager:
             },
         }
 
-    def from_dict(self, data: Dict[str, Any]) -> None:
+    def from_dict(self, data: dict[str, Any]) -> None:
         """Load profiles from dictionary (JSON deserialization)"""
         self._profiles.clear()
 
@@ -309,7 +310,7 @@ class BackendProfileManager:
 
 # Export only necessary symbols per PROJECT_RULES.md
 __all__ = [
-    "ConnectionType",
     "BackendProfile",
     "BackendProfileManager",
+    "ConnectionType",
 ]

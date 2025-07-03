@@ -7,27 +7,29 @@ Following PROJECT_RULES.md:
 - Structured logging integration
 """
 
+from typing import Any
+
 import structlog
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
-    QDialog,
-    QVBoxLayout,
-    QHBoxLayout,
-    QTabWidget,
-    QWidget,
-    QLabel,
-    QLineEdit,
-    QSpinBox,
     QCheckBox,
     QComboBox,
-    QPushButton,
+    QDialog,
     QFormLayout,
-    QMessageBox,
     QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMessageBox,
+    QPushButton,
+    QSpinBox,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtCore import Signal
 
-from ..config import get_config_manager, ThemePreference
-from ..themes import get_theme_manager, ThemeMode
+from ..config import ThemePreference, get_config_manager
+from ..themes import ThemeMode, get_theme_manager
 
 
 class SettingsDialog(QDialog):
@@ -44,7 +46,7 @@ class SettingsDialog(QDialog):
     backend_changed = Signal(str)  # profile_id
     theme_changed = Signal(str)  # theme name
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: Any = None) -> None:
         super().__init__(parent)
         self.logger = structlog.get_logger(__name__)
         self.config_manager = get_config_manager()
@@ -724,9 +726,12 @@ class SettingsDialog(QDialog):
                 error=str(e),
             )
 
-            QMessageBox.warning(
-                self, "Settings Error", f"Failed to apply settings: {str(e)}"
-            )
+            msg_box = QMessageBox(self)
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setWindowTitle("Settings Error")
+            msg_box.setText(f"Failed to apply settings: {e!s}")
+            msg_box.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg_box.exec()
 
     def _enter_new_profile_mode(self) -> None:
         """Enter new profile creation mode"""

@@ -7,21 +7,21 @@ This package provides a clean separation between:
 - Runtime configuration management
 """
 
-from .env_config import EnvConfig, get_env_config
-from .user_config import UserConfig, get_user_config, ThemePreference
 from .backend_profiles import BackendProfile, BackendProfileManager
 
 # Main configuration interface
 from .config_manager import ConfigManager, get_config_manager
+from .env_config import EnvConfig, get_env_config
+from .user_config import ThemePreference, UserConfig, get_user_config
 
 __all__ = [
-    "EnvConfig",
-    "UserConfig",
     "BackendProfile",
     "BackendProfileManager",
     "ConfigManager",
+    "EnvConfig",
     "ThemePreference",
+    "UserConfig",
+    "get_config_manager",
     "get_env_config",
     "get_user_config",
-    "get_config_manager",
 ]

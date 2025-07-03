@@ -8,27 +8,29 @@ Following PROJECT_RULES.md:
 - Structured logging with performance tracking
 """
 
-import structlog
-from PySide6.QtWidgets import (
-    QMainWindow,
-    QVBoxLayout,
-    QHBoxLayout,
-    QWidget,
-    QTextEdit,
-    QLineEdit,
-    QLabel,
-)
-from PySide6.QtGui import QFont, QTextCursor
-from PySide6.QtCore import Qt
+from typing import Any
 
-from .websocket_client import OptimizedWebSocketClient
+import structlog
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
+
 from ..config import get_config_manager
-from ..themes import get_theme_manager, ThemeMode, MaterialIconButton
+from ..themes import MaterialIconButton, ThemeMode, get_theme_manager
 from ..ui import SettingsDialog
+from .websocket_client import OptimizedWebSocketClient
 
 # Import compiled resources
 try:
-    from .. import resources_rc  # type: ignore
+    from .. import resources_rc
 except ImportError:
     # Resources not compiled yet, will use fallback
     resources_rc = None  # type: ignore
@@ -45,7 +47,7 @@ class MainWindowController(QMainWindow):
     - Minimal UI overhead for maximum speed
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         super().__init__()
         self.logger = structlog.get_logger(__name__)
 
@@ -63,7 +65,7 @@ class MainWindowController(QMainWindow):
         # UI state for streaming
         self._current_message_start = 0
         self._is_streaming = False
-        self._current_message_id = None
+        self._current_message_id: str | None = None
 
         # Setup UI
         self._setup_ui()
@@ -400,7 +402,7 @@ class MainWindowController(QMainWindow):
             message_length=len(message),
         )
 
-    def resizeEvent(self, event) -> None:
+    def resizeEvent(self, event: Any) -> None:
         """Handle window resize events and save geometry"""
         super().resizeEvent(event)
 
@@ -410,7 +412,7 @@ class MainWindowController(QMainWindow):
             geometry.width(), geometry.height(), geometry.x(), geometry.y()
         )
 
-    def moveEvent(self, event) -> None:
+    def moveEvent(self, event: Any) -> None:
         """Handle window move events and save geometry"""
         super().moveEvent(event)
 
@@ -420,7 +422,7 @@ class MainWindowController(QMainWindow):
             geometry.width(), geometry.height(), geometry.x(), geometry.y()
         )
 
-    def closeEvent(self, event) -> None:
+    def closeEvent(self, event: Any) -> None:
         """Clean shutdown"""
         self.logger.info(
             "Shutting down main window",

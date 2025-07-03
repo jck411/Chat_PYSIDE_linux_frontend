@@ -9,13 +9,14 @@ Following PROJECT_RULES.md:
 - CI/CD ready
 """
 
-import sys
 import subprocess
-import structlog
+import sys
 from pathlib import Path
 
+import structlog
 
-def setup_logging():
+
+def setup_logging() -> None:
     """Configure structured logging"""
     structlog.configure(
         processors=[
@@ -35,7 +36,7 @@ def setup_logging():
     )
 
 
-def compile_resources():
+def compile_resources() -> bool:
     """Compile Qt resources using pyside6-rcc"""
     logger = structlog.get_logger(__name__)
 
@@ -113,7 +114,7 @@ def compile_resources():
         return False
 
 
-def verify_resources():
+def verify_resources() -> bool:
     """Verify compiled resources can be imported"""
     logger = structlog.get_logger(__name__)
 
@@ -156,7 +157,7 @@ def verify_resources():
         return False
 
 
-def main():
+def main() -> None:
     """Main build script entry point"""
     setup_logging()
     logger = structlog.get_logger(__name__)

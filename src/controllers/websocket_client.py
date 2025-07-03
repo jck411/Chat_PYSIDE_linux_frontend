@@ -14,11 +14,11 @@ import json
 import threading
 import time
 import uuid
-from typing import Optional
+
 import structlog
 import websockets
-from websockets.asyncio.client import ClientConnection
 from PySide6.QtCore import QObject, Signal
+from websockets.asyncio.client import ClientConnection
 
 from ..config import get_config_manager
 
@@ -43,7 +43,7 @@ class OptimizedWebSocketClient(QObject):
     connection_status_changed = Signal(bool)
     error_occurred = Signal(str)
 
-    def __init__(self, websocket_url: Optional[str] = None):
+    def __init__(self, websocket_url: str | None = None):
         super().__init__()
         # Use configuration if no URL provided
         if websocket_url is None:
@@ -55,20 +55,20 @@ class OptimizedWebSocketClient(QObject):
         self.logger = structlog.get_logger(__name__)
 
         # Connection state
-        self._websocket: Optional[ClientConnection] = None
+        self._websocket: ClientConnection | None = None
         self._is_connected = False
         self._should_reconnect = True
         self._reconnect_attempts = 0
         self._max_reconnect_attempts = 5
-        self._client_id: Optional[str] = None
+        self._client_id: str | None = None
 
         # Background event loop
-        self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._thread: Optional[threading.Thread] = None
+        self._loop: asyncio.AbstractEventLoop | None = None
+        self._thread: threading.Thread | None = None
 
         # Performance monitoring
         self._chunk_times: list[float] = []
-        self._last_chunk_time: Optional[float] = None
+        self._last_chunk_time: float | None = None
 
         # Start the background event loop
         self._start_background_loop()
@@ -76,7 +76,7 @@ class OptimizedWebSocketClient(QObject):
     def _start_background_loop(self) -> None:
         """Start dedicated background thread with asyncio event loop"""
 
-        def run_loop():
+        def run_loop() -> None:
             self._loop = asyncio.new_event_loop()
             asyncio.set_event_loop(self._loop)
             self.logger.info(
@@ -104,7 +104,7 @@ class OptimizedWebSocketClient(QObject):
         if self._loop and not self._loop.is_closed():
             asyncio.run_coroutine_threadsafe(self._disconnect(), self._loop)
 
-    def update_backend_url(self, new_url: Optional[str] = None) -> None:
+    def update_backend_url(self, new_url: str | None = None) -> None:
         """Update WebSocket URL and reconnect"""
         if new_url is None:
             # Get current URL from config manager
@@ -145,6 +145,10 @@ class OptimizedWebSocketClient(QObject):
     async def _connect(self) -> None:
         """Establish WebSocket connection with optimal settings"""
         try:
+            if not self.websocket_url:
+                self.error_occurred.emit("No WebSocket URL configured")
+                return
+
             self.logger.info(
                 "Attempting WebSocket connection",
                 connect_event="websocket_connect_start",
@@ -183,7 +187,7 @@ class OptimizedWebSocketClient(QObject):
                 module=__name__,
                 error=str(e),
             )
-            self.error_occurred.emit(f"Connection failed: {str(e)}")
+            self.error_occurred.emit(f"Connection failed: {e!s}")
             await self._schedule_reconnect()
 
     async def _disconnect(self) -> None:
@@ -365,7 +369,7 @@ class OptimizedWebSocketClient(QObject):
                 module=__name__,
                 error=str(e),
             )
-            self.error_occurred.emit(f"Send failed: {str(e)}")
+            self.error_occurred.emit(f"Send failed: {e!s}")
 
     def send_ping(self) -> None:
         """Send ping to check connection health"""
@@ -516,7 +520,7 @@ class OptimizedWebSocketClient(QObject):
         return self._is_connected
 
     @property
-    def client_id(self) -> Optional[str]:
+    def client_id(self) -> str | None:
         """Get the client ID assigned by the backend"""
         return self._client_id
 

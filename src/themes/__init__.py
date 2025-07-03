@@ -7,19 +7,19 @@ Following PROJECT_RULES.md:
 - Type-safe exports
 """
 
-from .theme_config import ThemeMode, ThemeConfig, LIGHT_THEME, DARK_THEME
-from .theme_manager import ThemeManager, get_theme_manager
-from .theme_applier import ThemeApplier
 from .icon_button import MaterialIconButton
+from .theme_applier import ThemeApplier
+from .theme_config import DARK_THEME, LIGHT_THEME, ThemeConfig, ThemeMode
+from .theme_manager import ThemeManager, get_theme_manager
 
 # Export only necessary symbols per PROJECT_RULES.md
 __all__ = [
-    "ThemeMode",
-    "ThemeConfig",
-    "LIGHT_THEME",
     "DARK_THEME",
-    "ThemeManager",
-    "get_theme_manager",
-    "ThemeApplier",
+    "LIGHT_THEME",
     "MaterialIconButton",
+    "ThemeApplier",
+    "ThemeConfig",
+    "ThemeManager",
+    "ThemeMode",
+    "get_theme_manager",
 ]

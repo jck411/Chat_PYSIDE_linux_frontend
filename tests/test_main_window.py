@@ -1,7 +1,8 @@
 """Tests for the main window controller."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from src.controllers.main_window import MainWindowController
 

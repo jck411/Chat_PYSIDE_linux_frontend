@@ -4,10 +4,10 @@ import os
 from unittest.mock import patch
 
 from src.config import (
-    get_config_manager,
-    ThemePreference,
     BackendProfile,
     EnvConfig,
+    ThemePreference,
+    get_config_manager,
 )
 
 

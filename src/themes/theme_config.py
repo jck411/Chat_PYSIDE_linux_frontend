@@ -9,7 +9,6 @@ Following PROJECT_RULES.md:
 """
 
 from dataclasses import dataclass
-from typing import Dict
 from enum import Enum
 
 
@@ -182,7 +181,7 @@ DARK_THEME = ThemeConfig(
 )
 
 # Available themes registry
-AVAILABLE_THEMES: Dict[ThemeMode, ThemeConfig] = {
+AVAILABLE_THEMES: dict[ThemeMode, ThemeConfig] = {
     ThemeMode.LIGHT: LIGHT_THEME,
     ThemeMode.DARK: DARK_THEME,
 }
@@ -200,11 +199,11 @@ def get_available_theme_modes() -> list[ThemeMode]:
 
 # Export only necessary symbols per PROJECT_RULES.md
 __all__ = [
-    "ThemeMode",
-    "ThemeConfig",
-    "ColorPalette",
-    "LIGHT_THEME",
     "DARK_THEME",
-    "get_theme_config",
+    "LIGHT_THEME",
+    "ColorPalette",
+    "ThemeConfig",
+    "ThemeMode",
     "get_available_theme_modes",
+    "get_theme_config",
 ]

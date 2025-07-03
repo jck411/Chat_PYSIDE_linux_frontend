@@ -1,9 +1,10 @@
 """Tests for the main application module."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from src.app import setup_logging, setup_exception_handler, parse_args, main
+import pytest
+
+from src.app import main, parse_args, setup_exception_handler, setup_logging
 
 
 class TestSetupLogging:

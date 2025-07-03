@@ -8,14 +8,15 @@ Following PROJECT_RULES.md:
 - Signal-based updates
 """
 
-import structlog
-from typing import Optional
-from PySide6.QtWidgets import QPushButton
-from PySide6.QtGui import QIcon, QPixmap, QPainter
-from PySide6.QtCore import QSize, Qt
-from PySide6.QtSvg import QSvgRenderer
+from typing import Any
 
-from .theme_config import ThemeMode, ThemeConfig
+import structlog
+from PySide6.QtCore import QSize, Qt
+from PySide6.QtGui import QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QPushButton
+
+from .theme_config import ThemeConfig, ThemeMode
 
 
 class MaterialIconButton(QPushButton):
@@ -33,16 +34,16 @@ class MaterialIconButton(QPushButton):
         self,
         icon_resource_path: str,
         size: int = 24,
-        tooltip: Optional[str] = None,
-        parent=None,
-    ):
+        tooltip: str | None = None,
+        parent: Any = None,
+    ) -> None:
         super().__init__(parent)
         self.logger = structlog.get_logger(__name__)
 
         # Icon configuration
         self._icon_resource_path = icon_resource_path
         self._icon_size = size
-        self._current_theme_mode: Optional[ThemeMode] = None
+        self._current_theme_mode: ThemeMode | None = None
 
         # Setup button - make it align better with input fields
         self.setFixedSize(size + 12, size + 12)  # More padding for better alignment
@@ -130,7 +131,7 @@ class MaterialIconButton(QPushButton):
             icon_color=icon_color,
         )
 
-    def _create_colored_icon(self, color: str) -> Optional[QIcon]:
+    def _create_colored_icon(self, color: str) -> QIcon | None:
         """Create a colored version of the SVG icon"""
         try:
             # Load SVG content from resources

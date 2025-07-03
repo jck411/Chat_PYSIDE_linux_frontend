@@ -56,6 +56,20 @@ jobs:
             libxcb-render-util0 \
             libxcb-xinerama0 \
             libxcb-xfixes0 \
+            libxcb-cursor0 \
+            libxcb-util1 \
+            libxcb-glx0 \
+            libxcb-sync1 \
+            libxcb-shm0 \
+            libxcb-shape0 \
+            libxcb-xkb1 \
+            libxrender1 \
+            libxss1 \
+            libglu1-mesa \
+            libegl1-mesa \
+            libgl1-mesa-glx \
+            libfontconfig1 \
+            libdbus-1-3 \
             x11-utils \
             xvfb
 
@@ -79,10 +93,12 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           DISPLAY: ":99"
+          QT_LOGGING_RULES: "*.debug=false"
+          QT_ASSUME_STDERR_HAS_CONSOLE: "1"
         run: |
           # Start virtual display for Qt tests
           Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
-          sleep 3
+          sleep 5
 
           # Run tests with coverage
           uv run pytest \
@@ -105,6 +121,8 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           DISPLAY: ":99"
+          QT_LOGGING_RULES: "*.debug=false"
+          QT_ASSUME_STDERR_HAS_CONSOLE: "1"
         run: |
           timeout 10s uv run python -c "
           import sys

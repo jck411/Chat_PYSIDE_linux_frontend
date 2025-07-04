@@ -121,5 +121,6 @@ class TestConfigManagerSingleton:
 
         # Test that we can get websocket URL
         url = manager.get_websocket_url()
+        assert url is not None
         assert url.startswith(("ws://", "wss://"))
         assert "/ws/chat" in url

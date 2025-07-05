@@ -207,7 +207,7 @@ class OptimizedWebSocketClient(QObject):
         )
 
     async def _message_listener(self) -> None:
-        """Listen for incoming messages with direct chunk processing"""
+        """Listen for incoming messages with new protocol format only - no backward compatibility"""
         if not self._websocket:
             return
 
@@ -217,105 +217,149 @@ class OptimizedWebSocketClient(QObject):
 
                 try:
                     data = json.loads(message)
-                    message_type = data.get("type")
 
-                    if message_type == "connection_established":
-                        self._client_id = data.get("client_id")
-                        self.connection_established.emit(self._client_id or "")
-                        self.logger.info(
-                            "Connection established",
-                            connect_event="connection_established",
-                            module=__name__,
-                            client_id=self._client_id,
-                        )
+                    # Handle new protocol format
+                    if "request_id" in data and "status" in data:
+                        request_id = data.get("request_id")
+                        status = data.get("status")
 
-                    elif message_type == "message_start":
-                        message_id = data.get("id", "")
-                        user_message = data.get("user_message", "")
-                        self.message_started.emit(message_id, user_message)
-                        self.logger.info(
-                            "Message started",
-                            stream_event="message_start",
-                            module=__name__,
-                            message_id=message_id,
-                        )
+                        if status == "processing":
+                            # Message started processing
+                            self.message_started.emit(request_id, "")
+                            self.logger.info(
+                                "Message processing started",
+                                stream_event="message_processing_start",
+                                module=__name__,
+                                request_id=request_id,
+                            )
 
-                    elif message_type == "text_chunk":
-                        chunk_content = data.get("content", "")
+                        elif status == "chunk":
+                            # Handle chunk data - fail fast if chunk is missing
+                            if "chunk" not in data:
+                                error_msg = f"Chunk status missing chunk data. Request ID: {request_id}"
+                                self.logger.error(
+                                    "Chunk status missing chunk data - failing fast",
+                                    parse_event="missing_chunk_data",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    error=error_msg,
+                                )
+                                self.error_occurred.emit(error_msg)
+                                continue
 
-                        # CRITICAL: Direct chunk processing - no batching delays!
-                        self.chunk_received.emit(chunk_content)
+                            chunk = data["chunk"]
+                            chunk_type = chunk.get("type")
+                            chunk_data = chunk.get("data", "")
 
-                        # Performance monitoring
-                        self._track_chunk_performance(start_time)
+                            if chunk_type == "text":
+                                # CRITICAL: Direct chunk processing - no batching delays!
+                                self.chunk_received.emit(chunk_data)
 
-                    elif message_type == "message_complete":
-                        message_id = data.get("id", "")
-                        full_content = data.get("full_content", "")
-                        self.message_completed.emit(message_id, full_content)
-                        self.logger.info(
-                            "Message completed",
-                            stream_event="message_complete",
-                            module=__name__,
-                            message_id=message_id,
-                        )
+                                # Performance monitoring
+                                self._track_chunk_performance(start_time)
 
-                    elif message_type == "error":
-                        error_msg = data.get("error", "Unknown error")
-                        self.error_occurred.emit(error_msg)
+                            elif chunk_type == "metadata":
+                                # Handle metadata chunks (status updates, etc.)
+                                self.logger.info(
+                                    "Metadata chunk received",
+                                    stream_event="metadata_chunk",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    metadata=chunk_data,
+                                )
+
+                            elif chunk_type == "error":
+                                # Handle error chunks
+                                self.error_occurred.emit(chunk_data)
+                                self.logger.error(
+                                    "Error chunk received",
+                                    error_event="error_chunk",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    error=chunk_data,
+                                )
+
+                            # Handle other chunk types (image, audio, binary) when needed
+                            elif chunk_type in ["image", "audio", "binary"]:
+                                # For now, just log these - will be implemented later
+                                self.logger.info(
+                                    "Non-text chunk received",
+                                    stream_event="non_text_chunk",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    chunk_type=chunk_type,
+                                )
+
+                            else:
+                                # Fail fast on unknown chunk types
+                                error_msg = f"Unknown chunk type: {chunk_type}. Request ID: {request_id}"
+                                self.logger.error(
+                                    "Unknown chunk type received - failing fast",
+                                    parse_event="unknown_chunk_type",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    chunk_type=chunk_type,
+                                    error=error_msg,
+                                )
+                                self.error_occurred.emit(error_msg)
+
+                        elif status == "complete":
+                            # Message completed
+                            self.message_completed.emit(request_id, "")
+                            self.logger.info(
+                                "Message completed",
+                                stream_event="message_complete",
+                                module=__name__,
+                                request_id=request_id,
+                            )
+
+                        elif status == "error":
+                            # Handle error status
+                            error_msg = data.get("error", "Unknown error")
+                            self.error_occurred.emit(error_msg)
+                            self.logger.error(
+                                "Error status received",
+                                error_event="error_status",
+                                module=__name__,
+                                request_id=request_id,
+                                error=error_msg,
+                            )
+
+                        else:
+                            # Fail fast on unknown status types
+                            error_msg = f"Unknown status type: {status}. Request ID: {request_id}"
+                            self.logger.error(
+                                "Unknown status type received - failing fast",
+                                parse_event="unknown_status_type",
+                                module=__name__,
+                                request_id=request_id,
+                                status=status,
+                                error=error_msg,
+                            )
+                            self.error_occurred.emit(error_msg)
+
+                    # No backward compatibility - fail fast on unexpected message format
+                    else:
+                        error_msg = f"Invalid message format: missing required fields (request_id, status). Got: {list(data.keys())}"
                         self.logger.error(
-                            "Backend error received",
-                            error_event="backend_error",
+                            "Invalid message format received - failing fast",
+                            parse_event="invalid_message_format",
                             module=__name__,
                             error=error_msg,
+                            message_keys=list(data.keys()),
                         )
-
-                    elif message_type == "pong":
-                        self.logger.debug(
-                            "Pong received", ping_event="pong_received", module=__name__
-                        )
-
-                    elif message_type == "history":
-                        history_data = data.get("data", [])
-                        self.logger.info(
-                            "History received",
-                            history_event="history_received",
-                            module=__name__,
-                            history_length=len(history_data),
-                        )
-                        # Could emit a signal here if UI needs history display
-
-                    elif message_type == "history_cleared":
-                        self.logger.info(
-                            "History cleared confirmation",
-                            history_event="history_cleared",
-                            module=__name__,
-                        )
-
-                    elif message_type == "config":
-                        config_data = data.get("data", {})
-                        self.logger.info(
-                            "Config received",
-                            config_event="config_received",
-                            module=__name__,
-                            config_keys=list(config_data.keys()),
-                        )
-
-                    else:
-                        self.logger.debug(
-                            "Unknown message type received",
-                            parse_event="unknown_message_type",
-                            module=__name__,
-                            message_type=message_type,
-                        )
+                        self.error_occurred.emit(error_msg)
+                        # Fail fast - don't process invalid messages
 
                 except json.JSONDecodeError as e:
-                    self.logger.warning(
-                        "Invalid JSON received",
+                    error_msg = f"Invalid JSON received - failing fast: {e}"
+                    self.logger.error(
+                        "Invalid JSON received - failing fast",
                         parse_event="invalid_json",
                         module=__name__,
-                        error=str(e),
+                        error=error_msg,
                     )
+                    self.error_occurred.emit(error_msg)
 
         except websockets.exceptions.ConnectionClosed:
             self.logger.info(
@@ -335,7 +379,7 @@ class OptimizedWebSocketClient(QObject):
             await self._handle_connection_lost()
 
     async def _send_message(self, message: str) -> None:
-        """Send message to WebSocket server using correct protocol"""
+        """Send message to WebSocket server using new protocol format"""
         if not self._websocket or not self._is_connected:
             self.logger.warning(
                 "Cannot send message - not connected",
@@ -345,11 +389,14 @@ class OptimizedWebSocketClient(QObject):
             return
 
         try:
-            # Use the correct protocol format
+            # Use the new protocol format
             message_data = {
-                "type": "text_message",
-                "id": str(uuid.uuid4()),
-                "content": message,
+                "action": "chat",
+                "payload": {
+                    "text": message
+                },
+                "request_id": str(uuid.uuid4()),
+                "user_id": None  # Optional, can be added later
             }
 
             await self._websocket.send(json.dumps(message_data))
@@ -359,7 +406,8 @@ class OptimizedWebSocketClient(QObject):
                 send_event="message_sent",
                 module=__name__,
                 message_length=len(message),
-                message_id=message_data["id"],
+                request_id=message_data["request_id"],
+                action=message_data["action"],
             )
 
         except Exception as e:
@@ -377,12 +425,20 @@ class OptimizedWebSocketClient(QObject):
             asyncio.run_coroutine_threadsafe(self._send_ping(), self._loop)
 
     async def _send_ping(self) -> None:
-        """Send ping message"""
+        """Send ping message using new protocol format"""
         if not self._websocket or not self._is_connected:
             return
 
         try:
-            ping_data = {"type": "ping", "id": str(uuid.uuid4())}
+            # Use new protocol format for ping
+            ping_data = {
+                "action": "frontend_command",
+                "payload": {
+                    "command": "ping"
+                },
+                "request_id": str(uuid.uuid4()),
+                "user_id": None
+            }
             await self._websocket.send(json.dumps(ping_data))
         except Exception as e:
             self.logger.error(
@@ -398,12 +454,19 @@ class OptimizedWebSocketClient(QObject):
             asyncio.run_coroutine_threadsafe(self._get_history(), self._loop)
 
     async def _get_history(self) -> None:
-        """Send get_history request"""
+        """Send get_history request using new protocol format"""
         if not self._websocket or not self._is_connected:
             return
 
         try:
-            history_data = {"type": "get_history", "id": str(uuid.uuid4())}
+            history_data = {
+                "action": "frontend_command",
+                "payload": {
+                    "command": "get_history"
+                },
+                "request_id": str(uuid.uuid4()),
+                "user_id": None
+            }
             await self._websocket.send(json.dumps(history_data))
         except Exception as e:
             self.logger.error(
@@ -419,12 +482,19 @@ class OptimizedWebSocketClient(QObject):
             asyncio.run_coroutine_threadsafe(self._clear_history(), self._loop)
 
     async def _clear_history(self) -> None:
-        """Send clear_history request"""
+        """Send clear_history request using new protocol format"""
         if not self._websocket or not self._is_connected:
             return
 
         try:
-            clear_data = {"type": "clear_history", "id": str(uuid.uuid4())}
+            clear_data = {
+                "action": "frontend_command",
+                "payload": {
+                    "command": "clear_history"
+                },
+                "request_id": str(uuid.uuid4()),
+                "user_id": None
+            }
             await self._websocket.send(json.dumps(clear_data))
         except Exception as e:
             self.logger.error(
@@ -440,12 +510,19 @@ class OptimizedWebSocketClient(QObject):
             asyncio.run_coroutine_threadsafe(self._get_config(), self._loop)
 
     async def _get_config(self) -> None:
-        """Send get_config request"""
+        """Send get_config request using new protocol format"""
         if not self._websocket or not self._is_connected:
             return
 
         try:
-            config_data = {"type": "get_config", "id": str(uuid.uuid4())}
+            config_data = {
+                "action": "frontend_command",
+                "payload": {
+                    "command": "get_config"
+                },
+                "request_id": str(uuid.uuid4()),
+                "user_id": None
+            }
             await self._websocket.send(json.dumps(config_data))
         except Exception as e:
             self.logger.error(

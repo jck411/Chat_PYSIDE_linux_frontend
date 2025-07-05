@@ -392,11 +392,9 @@ class OptimizedWebSocketClient(QObject):
             # Use the new protocol format
             message_data = {
                 "action": "chat",
-                "payload": {
-                    "text": message
-                },
+                "payload": {"text": message},
                 "request_id": str(uuid.uuid4()),
-                "user_id": None  # Optional, can be added later
+                "user_id": None,  # Optional, can be added later
             }
 
             await self._websocket.send(json.dumps(message_data))
@@ -433,11 +431,9 @@ class OptimizedWebSocketClient(QObject):
             # Use new protocol format for ping
             ping_data = {
                 "action": "frontend_command",
-                "payload": {
-                    "command": "ping"
-                },
+                "payload": {"command": "ping"},
                 "request_id": str(uuid.uuid4()),
-                "user_id": None
+                "user_id": None,
             }
             await self._websocket.send(json.dumps(ping_data))
         except Exception as e:
@@ -461,11 +457,9 @@ class OptimizedWebSocketClient(QObject):
         try:
             history_data = {
                 "action": "frontend_command",
-                "payload": {
-                    "command": "get_history"
-                },
+                "payload": {"command": "get_history"},
                 "request_id": str(uuid.uuid4()),
-                "user_id": None
+                "user_id": None,
             }
             await self._websocket.send(json.dumps(history_data))
         except Exception as e:
@@ -489,11 +483,9 @@ class OptimizedWebSocketClient(QObject):
         try:
             clear_data = {
                 "action": "frontend_command",
-                "payload": {
-                    "command": "clear_history"
-                },
+                "payload": {"command": "clear_history"},
                 "request_id": str(uuid.uuid4()),
-                "user_id": None
+                "user_id": None,
             }
             await self._websocket.send(json.dumps(clear_data))
         except Exception as e:
@@ -517,11 +509,9 @@ class OptimizedWebSocketClient(QObject):
         try:
             config_data = {
                 "action": "frontend_command",
-                "payload": {
-                    "command": "get_config"
-                },
+                "payload": {"command": "get_config"},
                 "request_id": str(uuid.uuid4()),
-                "user_id": None
+                "user_id": None,
             }
             await self._websocket.send(json.dumps(config_data))
         except Exception as e:

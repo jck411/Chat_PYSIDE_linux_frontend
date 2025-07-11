@@ -35,7 +35,6 @@ class TestOptimizedWebSocketClientModule:
         assert hasattr(OptimizedWebSocketClient, "chunk_received")
         assert hasattr(OptimizedWebSocketClient, "message_started")
         assert hasattr(OptimizedWebSocketClient, "message_completed")
-        assert hasattr(OptimizedWebSocketClient, "connection_established")
         assert hasattr(OptimizedWebSocketClient, "connection_status_changed")
         assert hasattr(OptimizedWebSocketClient, "error_occurred")
 
@@ -52,15 +51,10 @@ class TestOptimizedWebSocketClientModule:
         assert hasattr(OptimizedWebSocketClient, "connect_to_backend")
         assert hasattr(OptimizedWebSocketClient, "disconnect_from_backend")
         assert hasattr(OptimizedWebSocketClient, "send_message")
-        assert hasattr(OptimizedWebSocketClient, "send_ping")
-        assert hasattr(OptimizedWebSocketClient, "get_history")
-        assert hasattr(OptimizedWebSocketClient, "clear_history")
-        assert hasattr(OptimizedWebSocketClient, "get_config")
         assert hasattr(OptimizedWebSocketClient, "cleanup")
 
         # Check properties
         assert hasattr(OptimizedWebSocketClient, "is_connected")
-        assert hasattr(OptimizedWebSocketClient, "client_id")
 
     def test_websocket_client_constructor_signature(self):
         """Test WebSocket client constructor signature."""
@@ -98,13 +92,11 @@ class TestWebSocketClientMocked:
             assert hasattr(client, "_is_connected")
             assert hasattr(client, "_should_reconnect")
             assert hasattr(client, "_reconnect_attempts")
-            assert hasattr(client, "_client_id")
 
             # Verify initial state
             assert client._is_connected is False
             assert client._should_reconnect is True
             assert client._reconnect_attempts == 0
-            assert client._client_id is None
 
     def test_websocket_client_default_url(self):
         """Test WebSocket client with default URL from config."""
@@ -147,13 +139,11 @@ class TestWebSocketClientMocked:
             assert hasattr(client, "_is_connected")
             assert hasattr(client, "_should_reconnect")
             assert hasattr(client, "_reconnect_attempts")
-            assert hasattr(client, "_client_id")
 
             # Verify initial state
             assert client._is_connected is False
             assert client._should_reconnect is True
             assert client._reconnect_attempts == 0
-            assert client._client_id is None
 
             # _loop and _thread should be None since we mocked the method
             assert client._loop is None

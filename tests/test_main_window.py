@@ -52,7 +52,6 @@ class TestMainWindowController:
         mock_websocket_client.chunk_received.connect.assert_called()
         mock_websocket_client.message_started.connect.assert_called()
         mock_websocket_client.message_completed.connect.assert_called()
-        mock_websocket_client.connection_established.connect.assert_called()
         mock_websocket_client.connection_status_changed.connect.assert_called()
         mock_websocket_client.error_occurred.connect.assert_called()
 
@@ -89,18 +88,6 @@ class TestMainWindowController:
 
         # Verify no message was sent
         mock_websocket_client.send_message.assert_not_called()
-
-    def test_on_connection_established(self, main_window):
-        """Test connection established handler."""
-        test_client_id = "test-client-123"
-
-        # Trigger connection established
-        main_window._on_connection_established(test_client_id)
-
-        # Verify message was added to chat display
-        chat_text = main_window.chat_display.toPlainText()
-        assert test_client_id in chat_text
-        assert "Connected with ID" in chat_text
 
     def test_on_message_started(self, main_window):
         """Test message started handler."""

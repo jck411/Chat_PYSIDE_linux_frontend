@@ -152,9 +152,7 @@ class MainWindowController(QMainWindow):
         self.websocket_client.chunk_received.connect(self._on_chunk_received)
         self.websocket_client.message_started.connect(self._on_message_started)
         self.websocket_client.message_completed.connect(self._on_message_completed)
-        self.websocket_client.connection_established.connect(
-            self._on_connection_established
-        )
+
         self.websocket_client.connection_status_changed.connect(
             self._on_connection_status_changed
         )
@@ -242,16 +240,6 @@ class MainWindowController(QMainWindow):
             module=__name__,
             theme_mode=theme_mode.value,
         )
-
-    def _on_connection_established(self, client_id: str) -> None:
-        """Handle connection established with client ID"""
-        self.logger.info(
-            "Connection established with client ID",
-            connect_event="connection_established",
-            module=__name__,
-            client_id=client_id,
-        )
-        self.chat_display.append(f"\n🔗 Connected with ID: {client_id}")
 
     def _on_message_started(self, message_id: str, user_message: str) -> None:
         """

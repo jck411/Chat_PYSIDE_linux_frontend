@@ -41,6 +41,8 @@ class OptimizedWebSocketClient(QObject):
     message_completed = Signal(str, str)  # message_id, full_content
     connection_status_changed = Signal(bool)
     error_occurred = Signal(str)
+    tool_execution_started = Signal(str)  # For tool execution notification
+    progress_updated = Signal(str, int)  # For progress updates (message, percentage)
 
     def __init__(self, websocket_url: str | None = None):
         super().__init__()
@@ -233,33 +235,104 @@ class OptimizedWebSocketClient(QObject):
                             # Extract user message from the processing message
                             chunk_data = data.get("chunk")
                             if chunk_data is not None:
-                                metadata = chunk_data.get("metadata")
-                                if metadata is not None:
-                                    user_message = metadata.get("user_message", "")
+                                chunk_type = chunk_data.get("type")
+                                
+                                if chunk_type == "tool_execution":
+                                    # Handle tool execution notification
+                                    tool_message = chunk_data.get("data", "")
+                                    self.tool_execution_started.emit(tool_message)
+                                    self.logger.info(
+                                        "Tool execution started",
+                                        stream_event="tool_execution_started",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        tool_message=tool_message,
+                                    )
+                                elif chunk_type == "progress":
+                                    # Handle progress updates
+                                    progress_message = chunk_data.get("data", "")
+                                    progress_data = chunk_data.get("metadata", {})
+                                    percentage = progress_data.get("percentage", 0)
+                                    self.progress_updated.emit(progress_message, percentage)
+                                    self.logger.info(
+                                        "Progress updated (processing)",
+                                        stream_event="progress_updated_processing",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        progress_message=progress_message,
+                                        percentage=percentage,
+                                    )
                                 else:
-                                    user_message = ""
+                                    # Handle regular processing message
+                                    metadata = chunk_data.get("metadata")
+                                    if metadata is not None:
+                                        user_message = metadata.get("user_message", "")
+                                    else:
+                                        user_message = ""
+                                    
+                                    self.message_started.emit(request_id, user_message)
+                                    self.logger.info(
+                                        "Message processing started",
+                                        stream_event="processing_started",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        user_message=user_message,
+                                    )
                             else:
-                                user_message = ""
-
-                            self.message_started.emit(request_id, user_message)
-                            self.logger.info(
-                                "Message processing started",
-                                stream_event="processing_started",
-                                module=__name__,
-                                request_id=request_id,
-                                user_message=user_message,
-                            )
+                                # Fallback for chunk_data being None
+                                self.message_started.emit(request_id, "")
+                                self.logger.info(
+                                    "Message processing started",
+                                    stream_event="processing_started",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    user_message="",
+                                )
 
                         elif status == "chunk":
                             chunk = data.get("chunk")
-                            if chunk is not None and chunk.get("type") == "text":
+                            if chunk is not None:
+                                chunk_type = chunk.get("type")
                                 chunk_content = chunk.get("data", "")
 
-                                # CRITICAL: Direct chunk processing - no batching delays!
-                                self.chunk_received.emit(chunk_content)
-
-                                # Performance monitoring
-                                self._track_chunk_performance(start_time)
+                                if chunk_type == "text":
+                                    # CRITICAL: Direct chunk processing - no batching delays!
+                                    self.chunk_received.emit(chunk_content)
+                                    
+                                    # Performance monitoring
+                                    self._track_chunk_performance(start_time)
+                                elif chunk_type == "tool_execution":
+                                    # Handle tool execution notification in chunk format
+                                    self.tool_execution_started.emit(chunk_content)
+                                    self.logger.info(
+                                        "Tool execution started (chunk)",
+                                        stream_event="tool_execution_chunk",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        tool_message=chunk_content,
+                                    )
+                                elif chunk_type == "progress":
+                                    # Handle progress updates
+                                    progress_data = chunk.get("metadata", {})
+                                    percentage = progress_data.get("percentage", 0)
+                                    self.progress_updated.emit(chunk_content, percentage)
+                                    self.logger.info(
+                                        "Progress updated",
+                                        stream_event="progress_updated",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        progress_message=chunk_content,
+                                        percentage=percentage,
+                                    )
+                                else:
+                                    # Log unknown chunk types for debugging
+                                    self.logger.warning(
+                                        "Unknown chunk type received",
+                                        chunk_event="unknown_chunk_type",
+                                        module=__name__,
+                                        chunk_type=chunk_type,
+                                        request_id=request_id,
+                                    )
 
                         elif status == "complete":
                             self.message_completed.emit(request_id, "")

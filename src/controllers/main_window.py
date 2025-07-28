@@ -355,9 +355,8 @@ class MainWindowController(QMainWindow):
             # Create a concise status message
             status_parts = [f"Connected ({provider}"]
             if model:
-                # Shorten model name for display
-                model_short = model.split("-")[-1] if "-" in model else model[:10]
-                status_parts.append(f" • {model_short}")
+                # Use full model name without truncation
+                status_parts.append(f" • {model}")
             status_parts.append(")")
 
             status_message = "".join(status_parts)

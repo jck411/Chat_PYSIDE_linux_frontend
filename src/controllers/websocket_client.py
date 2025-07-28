@@ -98,6 +98,9 @@ class OptimizedWebSocketClient(QObject):
 
     def connect_to_backend(self) -> None:
         """Initiate WebSocket connection (non-blocking)"""
+        # Reset reconnection attempts for manual connection
+        self._reconnect_attempts = 0
+        self._should_reconnect = True
         if self._loop and not self._loop.is_closed():
             asyncio.run_coroutine_threadsafe(self._connect(), self._loop)
 

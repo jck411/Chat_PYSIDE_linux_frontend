@@ -7,6 +7,7 @@ Following WebSocket_Streaming_Optimizations.md:
 - Dedicated background event loop
 - Thread-safe PySide6 signal integration
 - Optimal connection settings for speed
+- Provider-specific optimizations (Anthropic, OpenAI, etc.)
 """
 
 import asyncio
@@ -20,7 +21,7 @@ import websockets
 from PySide6.QtCore import QObject, Signal
 from websockets.asyncio.client import ClientConnection
 
-from ..config import get_config_manager
+from ..config import ProviderConfigManager, get_config_manager
 
 
 class OptimizedWebSocketClient(QObject):
@@ -41,6 +42,7 @@ class OptimizedWebSocketClient(QObject):
     message_completed = Signal(str, str)  # message_id, full_content
     connection_status_changed = Signal(bool)
     error_occurred = Signal(str)
+    provider_detected = Signal(str, str, str)  # provider, model, orchestrator
 
     def __init__(self, websocket_url: str | None = None):
         super().__init__()
@@ -52,6 +54,9 @@ class OptimizedWebSocketClient(QObject):
             self.websocket_url = websocket_url
 
         self.logger = structlog.get_logger(__name__)
+
+        # Provider configuration manager
+        self.provider_config = ProviderConfigManager()
 
         # Connection state
         self._websocket: ClientConnection | None = None
@@ -141,7 +146,7 @@ class OptimizedWebSocketClient(QObject):
             asyncio.run_coroutine_threadsafe(self._send_message(message), self._loop)
 
     async def _connect(self) -> None:
-        """Establish WebSocket connection with optimal settings"""
+        """Establish WebSocket connection with provider-optimized settings"""
         try:
             if not self.websocket_url:
                 self.error_occurred.emit("No WebSocket URL configured")
@@ -154,13 +159,21 @@ class OptimizedWebSocketClient(QObject):
                 url=self.websocket_url,
             )
 
-            # Optimal WebSocket configuration per optimization guide
+            # Get provider-optimized WebSocket configuration
+            ws_config = self.provider_config.get_websocket_config()
+
+            self.logger.info(
+                "Using provider-optimized WebSocket configuration",
+                connect_event="websocket_config",
+                module=__name__,
+                provider=self.provider_config.get_current_provider().value,
+                config=ws_config,
+            )
+
+            # Establish connection with provider-optimized settings
             self._websocket = await websockets.connect(
                 self.websocket_url,
-                ping_interval=20,  # Keep connection alive
-                ping_timeout=10,  # Quick failure detection
-                max_size=2**20,  # 1MB max message size
-                compression="deflate",  # Reduce bandwidth
+                **ws_config
             )
 
             self._is_connected = True
@@ -173,6 +186,7 @@ class OptimizedWebSocketClient(QObject):
                 "WebSocket connected successfully",
                 connect_event="websocket_connected",
                 module=__name__,
+                provider_summary=self.provider_config.get_provider_summary(),
             )
 
             # Start message listener
@@ -204,7 +218,7 @@ class OptimizedWebSocketClient(QObject):
         )
 
     async def _message_listener(self) -> None:
-        """Listen for incoming messages with direct chunk processing"""
+        """Listen for incoming messages with provider-specific optimizations"""
         if not self._websocket:
             return
 
@@ -230,12 +244,33 @@ class OptimizedWebSocketClient(QObject):
                         status = data.get("status")
 
                         if status == "processing":
-                            # Extract user message from the processing message
+                            # Extract provider info and user message from processing message
                             chunk_data = data.get("chunk")
                             if chunk_data is not None:
                                 metadata = chunk_data.get("metadata")
                                 if metadata is not None:
                                     user_message = metadata.get("user_message", "")
+
+                                    # Auto-detect and configure provider optimizations
+                                    provider_info = metadata.get("provider_info")
+                                    if provider_info:
+                                        provider_changed = self.provider_config.update_provider_info(provider_info)
+
+                                        if provider_changed:
+                                            # Emit provider detection signal
+                                            self.provider_detected.emit(
+                                                provider_info.get("provider", ""),
+                                                provider_info.get("model", ""),
+                                                provider_info.get("orchestrator_type", "")
+                                            )
+
+                                            # Log provider-specific optimization applied
+                                            self.logger.info(
+                                                "Provider-specific optimizations applied",
+                                                provider_event="optimizations_applied",
+                                                module=__name__,
+                                                provider_summary=self.provider_config.get_provider_summary(),
+                                            )
                                 else:
                                     user_message = ""
                             else:
@@ -248,6 +283,7 @@ class OptimizedWebSocketClient(QObject):
                                 module=__name__,
                                 request_id=request_id,
                                 user_message=user_message,
+                                provider=self.provider_config.get_current_provider().value,
                             )
 
                         elif status == "chunk":
@@ -255,8 +291,21 @@ class OptimizedWebSocketClient(QObject):
                             if chunk is not None and chunk.get("type") == "text":
                                 chunk_content = chunk.get("data", "")
 
-                                # CRITICAL: Direct chunk processing - no batching delays!
-                                self.chunk_received.emit(chunk_content)
+                                # Extract provider info from chunk metadata if available
+                                metadata = chunk.get("metadata")
+                                if metadata and "provider_info" in metadata:
+                                    provider_info = metadata["provider_info"]
+                                    self.provider_config.update_provider_info(provider_info)
+
+                                # Apply provider-specific chunk processing
+                                optimizations = self.provider_config.get_optimizations()
+
+                                if optimizations.immediate_processing:
+                                    # CRITICAL: Direct chunk processing - no batching delays!
+                                    self.chunk_received.emit(chunk_content)
+                                else:
+                                    # Future: Could implement buffering for providers that benefit from it
+                                    self.chunk_received.emit(chunk_content)
 
                                 # Performance monitoring
                                 self._track_chunk_performance(start_time)
@@ -268,18 +317,11 @@ class OptimizedWebSocketClient(QObject):
                                 stream_event="response_complete",
                                 module=__name__,
                                 request_id=request_id,
+                                provider=self.provider_config.get_current_provider().value,
                             )
 
                         elif status == "error":
-                            error_msg = data.get("error", "Unknown error")
-                            self.error_occurred.emit(error_msg)
-                            self.logger.error(
-                                "Backend error received",
-                                error_event="backend_error",
-                                module=__name__,
-                                error=error_msg,
-                                request_id=request_id,
-                            )
+                            await self._handle_error_message(data, request_id)
 
                     else:
                         self.logger.warning(
@@ -313,6 +355,59 @@ class OptimizedWebSocketClient(QObject):
                 error=str(e),
             )
             await self._handle_connection_lost()
+
+    async def _handle_error_message(self, data: dict, request_id: str) -> None:
+        """Handle error messages with provider-specific error recovery"""
+        chunk = data.get("chunk", {})
+        error_msg = chunk.get("error", data.get("error", "Unknown error"))
+
+        # Extract provider info and recoverable flag from error metadata
+        metadata = chunk.get("metadata", {})
+        provider_info = metadata.get("provider_info")
+        is_recoverable = metadata.get("recoverable", False)
+
+        # Update provider info if available
+        if provider_info:
+            self.provider_config.update_provider_info(provider_info)
+
+        # Apply provider-specific error handling
+        if self.provider_config.should_use_recoverable_errors() and is_recoverable:
+            # For Anthropic and other providers that support recoverable errors
+            if self.provider_config.should_retry_on_recoverable():
+                self.logger.warning(
+                    "Recoverable error received - will retry",
+                    error_event="recoverable_error",
+                    module=__name__,
+                    error=error_msg,
+                    request_id=request_id,
+                    provider=self.provider_config.get_current_provider().value,
+                )
+
+                # Could implement automatic retry logic here
+                # For now, just emit as a warning rather than error
+                # self.error_occurred.emit(f"Warning: {error_msg} (retrying...)")
+                return
+            else:
+                self.logger.warning(
+                    "Recoverable error received",
+                    error_event="recoverable_error_no_retry",
+                    module=__name__,
+                    error=error_msg,
+                    request_id=request_id,
+                    provider=self.provider_config.get_current_provider().value,
+                )
+
+        # Handle as regular error
+        self.error_occurred.emit(error_msg)
+        self.logger.error(
+            "Backend error received",
+            error_event="backend_error",
+            module=__name__,
+            error=error_msg,
+            request_id=request_id,
+            provider=self.provider_config.get_current_provider().value,
+            recoverable=is_recoverable,
+        )
 
     async def _send_message(self, message: str) -> None:
         """Send message to WebSocket server using correct protocol"""
@@ -412,6 +507,18 @@ class OptimizedWebSocketClient(QObject):
     def is_connected(self) -> bool:
         """Check if WebSocket is currently connected"""
         return self._is_connected
+
+    def get_provider_info(self) -> dict[str, str]:
+        """Get current provider information"""
+        return {
+            "provider": self.provider_config.get_current_provider().value,
+            "model": self.provider_config.get_current_model() or "",
+            "orchestrator": self.provider_config.get_current_orchestrator() or "",
+        }
+
+    def get_provider_summary(self) -> dict:
+        """Get detailed provider configuration summary"""
+        return self.provider_config.get_provider_summary()
 
     def cleanup(self) -> None:
         """Clean shutdown of WebSocket client"""

@@ -158,6 +158,9 @@ class MainWindowController(QMainWindow):
         )
         self.websocket_client.error_occurred.connect(self._on_error)
 
+        # Provider detection for automatic optimizations
+        self.websocket_client.provider_detected.connect(self._on_provider_detected)
+
     def _setup_theme_signals(self) -> None:
         """Connect theme manager signals for real-time theme updates"""
         self.theme_manager.theme_mode_changed.connect(self._on_theme_changed)
@@ -250,8 +253,15 @@ class MainWindowController(QMainWindow):
         self._current_message_id = message_id
         self._is_streaming = True
 
-        # Add assistant response header
-        self.chat_display.append(f"\n🤖 Assistant (ID: {message_id[:8]}...):")
+        # Get current model info for display
+        provider_info = self.websocket_client.get_provider_info()
+        model_name = provider_info.get("model", "Assistant")
+
+        # Use full model name without truncation
+        model_display = model_name or "Assistant"
+
+        # Add assistant response header with model name and space after colon
+        self.chat_display.append(f"\n🤖 {model_display}: ")
         self._current_message_start = self.chat_display.textCursor().position()
 
         self.logger.info(
@@ -296,8 +306,7 @@ class MainWindowController(QMainWindow):
             content_length=len(full_content),
         )
 
-        # Add completion indicator
-        self.chat_display.append(f"\n✅ Message completed (ID: {message_id[:8]}...)")
+        # No visible completion indicator - just clean end to message
 
     def _on_connection_status_changed(self, is_connected: bool) -> None:
         """Update connection status indicator"""
@@ -326,6 +335,47 @@ class MainWindowController(QMainWindow):
             error=error_message,
         )
         self.chat_display.append(f"\n❌ Error: {error_message}")
+
+    def _on_provider_detected(self, provider: str, model: str, orchestrator: str) -> None:
+        """Handle provider detection and display optimization info"""
+        self.logger.info(
+            "Provider detected - optimizations applied",
+            provider_event="provider_detected",
+            module=__name__,
+            provider=provider,
+            model=model,
+            orchestrator=orchestrator,
+        )
+
+        # Update status label to include provider info
+        if self.websocket_client.is_connected:
+            provider_summary = self.websocket_client.get_provider_summary()
+            optimizations = provider_summary.get("optimizations", {})
+
+            # Create a concise status message
+            status_parts = [f"Connected ({provider}"]
+            if model:
+                # Shorten model name for display
+                model_short = model.split("-")[-1] if "-" in model else model[:10]
+                status_parts.append(f" • {model_short}")
+            status_parts.append(")")
+
+            status_message = "".join(status_parts)
+            self.status_label.setText(status_message)
+            self.status_label.setStyleSheet("color: green; font-weight: bold;")
+
+            # Log detailed optimization info
+            self.logger.info(
+                "Provider optimizations active",
+                provider_event="optimizations_active",
+                module=__name__,
+                provider=provider,
+                model=model,
+                immediate_processing=optimizations.get("immediate_processing"),
+                use_compression=optimizations.get("use_compression"),
+                use_recoverable_errors=optimizations.get("use_recoverable_errors"),
+                max_retries=optimizations.get("max_retries"),
+            )
 
     def _open_settings(self) -> None:
         """Open the settings dialog"""

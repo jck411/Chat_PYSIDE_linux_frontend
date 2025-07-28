@@ -89,10 +89,17 @@ class TestMainWindowController:
         # Verify no message was sent
         mock_websocket_client.send_message.assert_not_called()
 
-    def test_on_message_started(self, main_window):
+    def test_on_message_started(self, main_window, mock_websocket_client):
         """Test message started handler."""
         test_message_id = "msg-123"
         test_user_message = "Test message"
+
+        # Mock provider info to return a model name matching backend format
+        mock_websocket_client.get_provider_info.return_value = {
+            "provider": "anthropic",
+            "model": "claude-3-5-sonnet-20241022",
+            "orchestrator": "AnthropicOrchestrator"
+        }
 
         # Trigger message started
         main_window._on_message_started(test_message_id, test_user_message)
@@ -101,10 +108,9 @@ class TestMainWindowController:
         assert main_window._is_streaming is True
         assert main_window._current_message_id == test_message_id
 
-        # Verify assistant header was added
+        # Verify assistant header was added with model name and space after colon
         chat_text = main_window.chat_display.toPlainText()
-        assert "Assistant" in chat_text
-        assert test_message_id[:8] in chat_text
+        assert "🤖 claude-3-5-sonnet-20241022: " in chat_text
 
     def test_on_chunk_received_while_streaming(self, main_window):
         """Test chunk received handler while streaming."""
@@ -152,9 +158,9 @@ class TestMainWindowController:
         assert main_window._is_streaming is False
         assert main_window._current_message_id is None
 
-        # Verify completion message was added
-        chat_text = main_window.chat_display.toPlainText()
-        assert "Message completed" in chat_text
+        # Verify no completion message was added (clean end)
+        final_chat_text = main_window.chat_display.toPlainText()
+        assert "Message completed" not in final_chat_text
 
     def test_on_connection_status_changed_connected(self, main_window):
         """Test connection status change to connected."""

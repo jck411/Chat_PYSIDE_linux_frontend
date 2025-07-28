@@ -324,7 +324,7 @@ class MainWindowController(QMainWindow):
                 )
             else:
                 self.status_label.setText("❌ No backend configured - Click to retry")
-            self.status_label.setStyleSheet("color: red; font-weight: bold; cursor: pointer; text-decoration: underline;")
+            self.status_label.setStyleSheet("color: red; font-weight: bold; text-decoration: underline;")
             self.send_icon_button.setEnabled(False)
 
     def _on_status_label_clicked(self, ev) -> None:
@@ -337,7 +337,7 @@ class MainWindowController(QMainWindow):
             )
             # Update status to show reconnection attempt
             self.status_label.setText("🔄 Reconnecting manually...")
-            self.status_label.setStyleSheet("color: orange; font-weight: bold; cursor: pointer;")
+            self.status_label.setStyleSheet("color: orange; font-weight: bold;")
 
             # Trigger manual reconnection
             self.websocket_client.connect_to_backend()

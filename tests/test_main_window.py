@@ -177,12 +177,42 @@ class TestMainWindowController:
         """Test connection status change to disconnected."""
         main_window._on_connection_status_changed(False)
 
-        # Verify status label shows disconnected
+        # Verify status label shows disconnected with click instruction
         status_text = main_window.status_label.text()
         assert "Disconnected" in status_text
+        assert "Click to retry" in status_text
 
         # Verify send button is disabled
         assert not main_window.send_icon_button.isEnabled()
+
+    def test_status_label_click_when_disconnected(self, main_window, mock_websocket_client):
+        """Test clicking status label when disconnected triggers reconnection."""
+        # Set up disconnected state
+        mock_websocket_client.is_connected = False
+        main_window._on_connection_status_changed(False)
+
+        # Create a mock mouse event
+        from PySide6.QtCore import QPointF, Qt
+        from PySide6.QtGui import QMouseEvent
+
+        mock_event = QMouseEvent(
+            QMouseEvent.Type.MouseButtonPress,
+            QPointF(0, 0),
+            QPointF(0, 0),
+            Qt.MouseButton.LeftButton,
+            Qt.MouseButton.LeftButton,
+            Qt.KeyboardModifier.NoModifier
+        )
+
+        # Trigger click
+        main_window._on_status_label_clicked(mock_event)
+
+        # Verify reconnection was attempted
+        mock_websocket_client.connect_to_backend.assert_called()
+
+        # Verify status message changed to reconnecting
+        status_text = main_window.status_label.text()
+        assert "Reconnecting manually" in status_text
 
     def test_on_error(self, main_window):
         """Test error handler."""

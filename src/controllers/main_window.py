@@ -103,11 +103,12 @@ class MainWindowController(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)  # Improved spacing between elements
 
-        # Left side: Connection status
+        # Left side: Connection status (clickable when disconnected)
         self.status_label = QLabel("Connecting...")
         self.status_label.setStyleSheet(
             "color: orange; font-weight: bold; font-size: 11px; padding: 5px;"
         )
+        self.status_label.mousePressEvent = self._on_status_label_clicked
         header_layout.addWidget(self.status_label)
 
         # Spacer to push icons to the right
@@ -319,12 +320,27 @@ class MainWindowController(QMainWindow):
             active_profile = self.config_manager.get_active_backend_profile()
             if active_profile:
                 self.status_label.setText(
-                    f"❌ Disconnected from {active_profile.host}:{active_profile.port} - Reconnecting..."
+                    f"❌ Disconnected from {active_profile.host}:{active_profile.port} - Click to retry"
                 )
             else:
-                self.status_label.setText("❌ No backend configured - Reconnecting...")
-            self.status_label.setStyleSheet("color: red; font-weight: bold;")
+                self.status_label.setText("❌ No backend configured - Click to retry")
+            self.status_label.setStyleSheet("color: red; font-weight: bold; cursor: pointer; text-decoration: underline;")
             self.send_icon_button.setEnabled(False)
+
+    def _on_status_label_clicked(self, ev) -> None:
+        """Handle status label click for manual reconnection"""
+        if not self.websocket_client.is_connected:
+            self.logger.info(
+                "Manual reconnection requested",
+                ui_event="manual_reconnection",
+                module=__name__,
+            )
+            # Update status to show reconnection attempt
+            self.status_label.setText("🔄 Reconnecting manually...")
+            self.status_label.setStyleSheet("color: orange; font-weight: bold; cursor: pointer;")
+
+            # Trigger manual reconnection
+            self.websocket_client.connect_to_backend()
 
     def _on_error(self, error_message: str) -> None:
         """Handle WebSocket errors"""

@@ -225,6 +225,27 @@ class TestMainWindowController:
         assert test_error in chat_text
         assert "Error:" in chat_text
 
+    def test_on_error_max_retries_exceeded(self, main_window):
+        """Test error handler with max retries exceeded message."""
+        test_error = "Connection failed - max retries exceeded"
+
+        main_window._on_error(test_error)
+
+        # Verify error was added to chat display
+        chat_text = main_window.chat_display.toPlainText()
+        assert test_error in chat_text
+        assert "Error:" in chat_text
+
+        # Verify status was updated to show clickable retry option
+        status_text = main_window.status_label.text()
+        assert "Click to retry" in status_text
+        assert "❌" in status_text
+
+        # Verify status has underline styling for clickability
+        style = main_window.status_label.styleSheet()
+        assert "text-decoration: underline" in style
+        assert "color: red" in style
+
     def test_close_event_cleanup(self, main_window, mock_websocket_client):
         """Test that close event triggers cleanup."""
         from PySide6.QtGui import QCloseEvent

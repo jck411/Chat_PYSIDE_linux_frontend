@@ -352,6 +352,21 @@ class MainWindowController(QMainWindow):
         )
         self.chat_display.append(f"\n❌ Error: {error_message}")
 
+        # If max retries exceeded, update status to show clickable retry option
+        if "max retries exceeded" in error_message.lower():
+            self._update_status_for_retry()
+
+    def _update_status_for_retry(self) -> None:
+        """Update status label to show clickable retry option after max attempts"""
+        active_profile = self.config_manager.get_active_backend_profile()
+        if active_profile:
+            self.status_label.setText(
+                f"❌ Disconnected from {active_profile.host}:{active_profile.port} - Click to retry"
+            )
+        else:
+            self.status_label.setText("❌ No backend configured - Click to retry")
+        self.status_label.setStyleSheet("color: red; font-weight: bold; text-decoration: underline;")
+
     def _on_provider_detected(self, provider: str, model: str, orchestrator: str) -> None:
         """Handle provider detection and display optimization info"""
         self.logger.info(

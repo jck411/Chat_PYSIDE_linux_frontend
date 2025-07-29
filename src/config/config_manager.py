@@ -128,6 +128,58 @@ class ConfigManager:
         geometry = WindowGeometry(width=width, height=height, x=x, y=y)
         self.user_config.set_window_geometry(geometry)
 
+    def get_font_config(self) -> dict[str, Any]:
+        """Get font configuration as dictionary"""
+        font_config = self.user_config.get_font_config()
+        return {
+            "chat_font_family": font_config.chat_font_family,
+            "chat_font_size": font_config.chat_font_size,
+            "ui_font_family": font_config.ui_font_family,
+            "ui_font_size": font_config.ui_font_size,
+        }
+
+    def set_font_config(
+        self,
+        chat_font_family: str,
+        chat_font_size: int,
+        ui_font_family: str,
+        ui_font_size: int
+    ) -> None:
+        """Set complete font configuration"""
+        from .user_config import FontConfig
+
+        font_config = FontConfig(
+            chat_font_family=chat_font_family,
+            chat_font_size=chat_font_size,
+            ui_font_family=ui_font_family,
+            ui_font_size=ui_font_size
+        )
+        self.user_config.set_font_config(font_config)
+
+    def set_chat_font(self, family: str, size: int) -> None:
+        """Set chat font family and size"""
+        self.user_config.set_chat_font(family, size)
+
+        self.logger.info(
+            "Chat font changed via config manager",
+            config_event="chat_font_changed",
+            module=__name__,
+            font_family=family,
+            font_size=size,
+        )
+
+    def set_ui_font(self, family: str, size: int) -> None:
+        """Set UI font family and size"""
+        self.user_config.set_ui_font(family, size)
+
+        self.logger.info(
+            "UI font changed via config manager",
+            config_event="ui_font_changed",
+            module=__name__,
+            font_family=family,
+            font_size=size,
+        )
+
     # Backend Configuration Methods
     def get_active_backend_profile(self) -> BackendProfile | None:
         """Get the currently active backend profile"""

@@ -42,11 +42,29 @@ class WindowGeometry:
 
 
 @dataclass
+class FontConfig:
+    """Font configuration settings"""
+
+    chat_font_family: str = "monospace"
+    chat_font_size: int = 10
+    ui_font_family: str = "sans-serif"
+    ui_font_size: int = 9
+
+    def __post_init__(self) -> None:
+        """Validate font values"""
+        if self.chat_font_size < 8 or self.chat_font_size > 24:
+            raise ValueError("Chat font size must be between 8 and 24")
+        if self.ui_font_size < 8 or self.ui_font_size > 16:
+            raise ValueError("UI font size must be between 8 and 16")
+
+
+@dataclass
 class UIConfig:
     """UI configuration settings"""
 
     theme: ThemePreference = ThemePreference.LIGHT
     window_geometry: WindowGeometry = field(default_factory=WindowGeometry)
+    font_config: FontConfig = field(default_factory=FontConfig)
     backend_profiles: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
@@ -54,6 +72,7 @@ class UIConfig:
         return {
             "theme": self.theme.value,
             "window_geometry": asdict(self.window_geometry),
+            "font_config": asdict(self.font_config),
             "backend_profiles": self.backend_profiles,
         }
 
@@ -69,10 +88,16 @@ class UIConfig:
         geometry_data = data.get("window_geometry", {})
         geometry = WindowGeometry(**geometry_data)
 
+        font_data = data.get("font_config", {})
+        font_config = FontConfig(**font_data)
+
         backend_profiles = data.get("backend_profiles", {})
 
         return cls(
-            theme=theme, window_geometry=geometry, backend_profiles=backend_profiles
+            theme=theme,
+            window_geometry=geometry,
+            font_config=font_config,
+            backend_profiles=backend_profiles
         )
 
 
@@ -232,6 +257,51 @@ class UserConfig:
             geometry=asdict(geometry),
         )
 
+    def get_font_config(self) -> FontConfig:
+        """Get font configuration"""
+        return self.ui_config.font_config
+
+    def set_font_config(self, font_config: FontConfig) -> None:
+        """Set font configuration and save"""
+        self.ui_config.font_config = font_config
+        self.save()
+
+        self.logger.info(
+            "Font configuration updated",
+            config_event="font_updated",
+            module=__name__,
+            chat_font=f"{font_config.chat_font_family} {font_config.chat_font_size}px",
+            ui_font=f"{font_config.ui_font_family} {font_config.ui_font_size}px",
+        )
+
+    def set_chat_font(self, family: str, size: int) -> None:
+        """Set chat font family and size"""
+        self.ui_config.font_config.chat_font_family = family
+        self.ui_config.font_config.chat_font_size = size
+        self.save()
+
+        self.logger.info(
+            "Chat font updated",
+            config_event="chat_font_updated",
+            module=__name__,
+            font_family=family,
+            font_size=size,
+        )
+
+    def set_ui_font(self, family: str, size: int) -> None:
+        """Set UI font family and size"""
+        self.ui_config.font_config.ui_font_family = family
+        self.ui_config.font_config.ui_font_size = size
+        self.save()
+
+        self.logger.info(
+            "UI font updated",
+            config_event="ui_font_updated",
+            module=__name__,
+            font_family=family,
+            font_size=size,
+        )
+
     def reset_to_defaults(self) -> None:
         """Reset configuration to defaults"""
         self.ui_config = UIConfig()
@@ -310,6 +380,7 @@ def get_user_config(config_path: Path | None = None) -> UserConfig:
 
 # Export only necessary symbols per PROJECT_RULES.md
 __all__ = [
+    "FontConfig",
     "ThemePreference",
     "UIConfig",
     "UserConfig",

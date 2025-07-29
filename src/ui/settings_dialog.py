@@ -15,6 +15,7 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QFontComboBox,
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
@@ -45,6 +46,7 @@ class SettingsDialog(QDialog):
     # Signals
     backend_changed = Signal(str)  # profile_id
     theme_changed = Signal(str)  # theme name
+    font_changed = Signal()  # font configuration changed
 
     def __init__(self, parent: Any = None) -> None:
         super().__init__(parent)
@@ -77,6 +79,9 @@ class SettingsDialog(QDialog):
 
         # UI settings tab
         self._setup_ui_tab()
+
+        # Font settings tab
+        self._setup_font_tab()
 
         # Button box
         button_layout = QHBoxLayout()
@@ -330,6 +335,46 @@ class SettingsDialog(QDialog):
         layout.addStretch()
         self.tab_widget.addTab(ui_widget, "UI")
 
+    def _setup_font_tab(self) -> None:
+        """Setup font preferences tab"""
+        font_widget = QWidget()
+        layout = QVBoxLayout(font_widget)
+
+        # Chat font settings
+        chat_font_group = QGroupBox("Chat Font")
+        chat_font_layout = QFormLayout(chat_font_group)
+
+        self.chat_font_combo = QFontComboBox()
+        self.chat_font_combo.setCurrentFont("monospace")
+
+        self.chat_font_size_spinbox = QSpinBox()
+        self.chat_font_size_spinbox.setRange(8, 24)
+        self.chat_font_size_spinbox.setValue(10)
+        self.chat_font_size_spinbox.setSuffix(" pt")
+
+        chat_font_layout.addRow("Font Family:", self.chat_font_combo)
+        chat_font_layout.addRow("Font Size:", self.chat_font_size_spinbox)
+        layout.addWidget(chat_font_group)
+
+        # UI font settings
+        ui_font_group = QGroupBox("Interface Font")
+        ui_font_layout = QFormLayout(ui_font_group)
+
+        self.ui_font_combo = QFontComboBox()
+        self.ui_font_combo.setCurrentFont("sans-serif")
+
+        self.ui_font_size_spinbox = QSpinBox()
+        self.ui_font_size_spinbox.setRange(8, 16)
+        self.ui_font_size_spinbox.setValue(9)
+        self.ui_font_size_spinbox.setSuffix(" pt")
+
+        ui_font_layout.addRow("Font Family:", self.ui_font_combo)
+        ui_font_layout.addRow("Font Size:", self.ui_font_size_spinbox)
+        layout.addWidget(ui_font_group)
+
+        layout.addStretch()
+        self.tab_widget.addTab(font_widget, "Fonts")
+
     def _load_current_settings(self) -> None:
         """Load current settings into the dialog"""
         # Load backend profiles
@@ -376,6 +421,13 @@ class SettingsDialog(QDialog):
         geometry = self.config_manager.get_window_geometry()
         self.width_spinbox.setValue(geometry["width"])
         self.height_spinbox.setValue(geometry["height"])
+
+        # Load font configuration
+        font_config = self.config_manager.get_font_config()
+        self.chat_font_combo.setCurrentFont(font_config["chat_font_family"])
+        self.chat_font_size_spinbox.setValue(font_config["chat_font_size"])
+        self.ui_font_combo.setCurrentFont(font_config["ui_font_family"])
+        self.ui_font_size_spinbox.setValue(font_config["ui_font_size"])
 
     def _update_backend_details(self) -> None:
         """Update backend editing fields with selected profile"""
@@ -707,6 +759,50 @@ class SettingsDialog(QDialog):
                 self.logger.info(
                     "No geometry change needed",
                     ui_event="no_geometry_change",
+                    module=__name__,
+                )
+
+            # Apply font configuration
+            current_font_config = self.config_manager.get_font_config()
+            new_chat_font_family = self.chat_font_combo.currentFont().family()
+            new_chat_font_size = self.chat_font_size_spinbox.value()
+            new_ui_font_family = self.ui_font_combo.currentFont().family()
+            new_ui_font_size = self.ui_font_size_spinbox.value()
+
+            font_changed = (
+                new_chat_font_family != current_font_config["chat_font_family"] or
+                new_chat_font_size != current_font_config["chat_font_size"] or
+                new_ui_font_family != current_font_config["ui_font_family"] or
+                new_ui_font_size != current_font_config["ui_font_size"]
+            )
+
+            if font_changed:
+                self.config_manager.set_font_config(
+                    new_chat_font_family,
+                    new_chat_font_size,
+                    new_ui_font_family,
+                    new_ui_font_size
+                )
+
+                # Apply font changes to current window immediately if possible
+                main_window = self.parent()
+                if main_window and hasattr(main_window, "apply_font_config"):
+                    main_window.apply_font_config()
+
+                # Emit font changed signal
+                self.font_changed.emit()
+
+                self.logger.info(
+                    "Font configuration updated and applied",
+                    ui_event="font_updated",
+                    module=__name__,
+                    chat_font=f"{new_chat_font_family} {new_chat_font_size}pt",
+                    ui_font=f"{new_ui_font_family} {new_ui_font_size}pt",
+                )
+            else:
+                self.logger.info(
+                    "No font change needed",
+                    ui_event="no_font_change",
                     module=__name__,
                 )
 

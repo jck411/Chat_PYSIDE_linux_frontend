@@ -126,7 +126,7 @@ class MainWindowController(QMainWindow):
         # Chat display - optimized for streaming with markdown support
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
-        self.chat_display.setFont(QFont("Consolas", 10))
+        self._apply_chat_font()  # Apply font from configuration
         # Enable HTML/rich text for markdown rendering
         self.chat_display.setAcceptRichText(True)
         layout.addWidget(self.chat_display)
@@ -152,6 +152,40 @@ class MainWindowController(QMainWindow):
 
         # Update icon themes
         self._update_icon_themes()
+
+        # Apply UI fonts
+        self._apply_ui_font()
+
+    def _apply_chat_font(self) -> None:
+        """Apply chat font from configuration"""
+        font_config = self.config_manager.get_font_config()
+        chat_font = QFont(
+            font_config["chat_font_family"],
+            font_config["chat_font_size"]
+        )
+        self.chat_display.setFont(chat_font)
+
+    def _apply_ui_font(self) -> None:
+        """Apply UI font from configuration"""
+        font_config = self.config_manager.get_font_config()
+        ui_font = QFont(
+            font_config["ui_font_family"],
+            font_config["ui_font_size"]
+        )
+        # Apply to various UI elements
+        self.message_input.setFont(ui_font)
+        self.status_label.setFont(ui_font)
+
+    def apply_font_config(self) -> None:
+        """Apply complete font configuration - called from settings"""
+        self._apply_chat_font()
+        self._apply_ui_font()
+
+        self.logger.info(
+            "Font configuration applied",
+            ui_event="font_config_applied",
+            module=__name__,
+        )
 
     def _setup_websocket_signals(self) -> None:
         """Connect WebSocket signals for immediate UI updates"""
@@ -457,6 +491,7 @@ class MainWindowController(QMainWindow):
         # Connect settings dialog signals
         settings_dialog.backend_changed.connect(self._on_backend_changed)
         settings_dialog.theme_changed.connect(self._on_settings_theme_changed)
+        settings_dialog.font_changed.connect(self._on_font_changed)
 
         # Show dialog
         result = settings_dialog.exec()
@@ -489,6 +524,15 @@ class MainWindowController(QMainWindow):
             theme=theme_name,
         )
         # Theme change is handled automatically by the theme manager
+
+    def _on_font_changed(self) -> None:
+        """Handle font change from settings"""
+        self.apply_font_config()
+        self.logger.info(
+            "Font changed from settings",
+            ui_event="font_changed_from_settings",
+            module=__name__,
+        )
 
     def _send_message(self) -> None:
         """Send user message and prepare for streaming response"""

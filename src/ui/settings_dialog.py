@@ -743,7 +743,14 @@ class SettingsDialog(QDialog):
                 # Apply to current main window immediately
                 main_window = self.parent()
                 if main_window and hasattr(main_window, "resize"):
-                    main_window.resize(new_width, new_height)
+                    try:
+                        # Use getattr to safely call resize method
+                        resize_method = getattr(main_window, "resize", None)
+                        if resize_method:
+                            resize_method(new_width, new_height)
+                    except (AttributeError, TypeError):
+                        # Ignore if resize method doesn't exist or fails
+                        pass
 
                 # Save as default for future windows
                 self.config_manager.set_window_geometry(
@@ -787,7 +794,14 @@ class SettingsDialog(QDialog):
                 # Apply font changes to current window immediately if possible
                 main_window = self.parent()
                 if main_window and hasattr(main_window, "apply_font_config"):
-                    main_window.apply_font_config()
+                    try:
+                        # Use getattr to safely call apply_font_config method
+                        apply_font_method = getattr(main_window, "apply_font_config", None)
+                        if apply_font_method:
+                            apply_font_method()
+                    except (AttributeError, TypeError):
+                        # Ignore if method doesn't exist or fails
+                        pass
 
                 # Emit font changed signal
                 self.font_changed.emit()

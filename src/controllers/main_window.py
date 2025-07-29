@@ -302,8 +302,8 @@ class MainWindowController(QMainWindow):
         # Use full model name without truncation
         model_display = model_name or "Assistant"
 
-        # Add assistant response header with model name
-        header_html = f"<br><strong>🤖 {model_display}:</strong><br>"
+        # Add assistant response header with model name and proper spacing
+        header_html = f"<strong>🤖 {model_display}:</strong><br>"
         cursor = self.chat_display.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml(header_html)
@@ -368,6 +368,11 @@ class MainWindowController(QMainWindow):
         # Ensure final content is rendered with complete markdown
         if self._streaming_content:
             self._update_streaming_display()
+
+        # Add spacing after the completed message
+        cursor = self.chat_display.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertHtml("<br>")
 
         # Clear the content buffer
         self._streaming_content = ""
@@ -540,8 +545,8 @@ class MainWindowController(QMainWindow):
         if not message:
             return
 
-        # Display user message with HTML formatting
-        user_html = f"<br><strong>👤 You:</strong> {message}<br>"
+        # Display user message with HTML formatting and proper spacing
+        user_html = f"<br><br><strong>👤 You:</strong> {message}<br><br>"
         cursor = self.chat_display.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml(user_html)

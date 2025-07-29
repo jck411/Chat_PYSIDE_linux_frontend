@@ -25,7 +25,7 @@ from PySide6.QtWidgets import (
 
 from ..config import get_config_manager
 from ..themes import MaterialIconButton, ThemeMode, get_theme_manager
-from ..ui import SettingsDialog
+from ..ui import SettingsDialog, get_markdown_formatter
 from .websocket_client import OptimizedWebSocketClient
 
 # Import compiled resources
@@ -58,6 +58,9 @@ class MainWindowController(QMainWindow):
         self.theme_manager = get_theme_manager()
         self._setup_theme_signals()
 
+        # Initialize markdown formatter
+        self.markdown_formatter = get_markdown_formatter()
+
         # Initialize WebSocket client
         self.websocket_client = OptimizedWebSocketClient()
         self._setup_websocket_signals()
@@ -66,6 +69,7 @@ class MainWindowController(QMainWindow):
         self._current_message_start = 0
         self._is_streaming = False
         self._current_message_id: str | None = None
+        self._streaming_content = ""  # Buffer for markdown processing
 
         # Setup UI
         self._setup_ui()
@@ -119,10 +123,12 @@ class MainWindowController(QMainWindow):
 
         layout.addLayout(header_layout)
 
-        # Chat display - optimized for streaming
+        # Chat display - optimized for streaming with markdown support
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
         self.chat_display.setFont(QFont("Consolas", 10))
+        # Enable HTML/rich text for markdown rendering
+        self.chat_display.setAcceptRichText(True)
         layout.addWidget(self.chat_display)
 
         # Input area with proper alignment
@@ -247,12 +253,13 @@ class MainWindowController(QMainWindow):
 
     def _on_message_started(self, message_id: str, user_message: str) -> None:
         """
-        Handle message start - prepare for streaming.
+        Handle message start - prepare for streaming with markdown support.
 
         This is Phase 1 of the three-phase streaming protocol.
         """
         self._current_message_id = message_id
         self._is_streaming = True
+        self._streaming_content = ""  # Reset content buffer
 
         # Get current model info for display
         provider_info = self.websocket_client.get_provider_info()
@@ -261,8 +268,13 @@ class MainWindowController(QMainWindow):
         # Use full model name without truncation
         model_display = model_name or "Assistant"
 
-        # Add assistant response header with model name and space after colon
-        self.chat_display.append(f"\n🤖 {model_display}: ")
+        # Add assistant response header with model name
+        header_html = f"<br><strong>🤖 {model_display}:</strong><br>"
+        cursor = self.chat_display.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertHtml(header_html)
+
+        # Store position for content updates
         self._current_message_start = self.chat_display.textCursor().position()
 
         self.logger.info(
@@ -274,30 +286,57 @@ class MainWindowController(QMainWindow):
 
     def _on_chunk_received(self, chunk: str) -> None:
         """
-        Handle incoming text chunk with immediate UI update.
+        Handle incoming text chunk - accumulate for markdown processing.
 
         This is Phase 2 of the three-phase streaming protocol.
-        OPTIMIZATION: Direct append without batching delays.
-        This is the critical path for streaming performance.
+        For markdown support, we accumulate chunks and periodically render.
         """
         if self._is_streaming:
-            # Direct text append for immediate display
-            cursor = self.chat_display.textCursor()
-            cursor.movePosition(QTextCursor.MoveOperation.End)
-            cursor.insertText(chunk)
+            # Accumulate content for markdown processing
+            self._streaming_content += chunk
 
-            # Auto-scroll to bottom (optimized)
-            scrollbar = self.chat_display.verticalScrollBar()
-            scrollbar.setValue(scrollbar.maximum())
+            # Render markdown every few words for responsive display
+            # This balances performance with visual feedback
+            if len(self._streaming_content.split()) % 5 == 0 or chunk.endswith(
+                ("\n", ".", "!", "?")
+            ):
+                self._update_streaming_display()
+
+    def _update_streaming_display(self) -> None:
+        """Update the chat display with current markdown content."""
+        if not self._streaming_content:
+            return
+
+        # Convert markdown to HTML
+        html_content = self.markdown_formatter.format_message(self._streaming_content)
+
+        # Replace content from the message start position
+        cursor = self.chat_display.textCursor()
+        cursor.setPosition(self._current_message_start)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.End, QTextCursor.MoveMode.KeepAnchor
+        )
+        cursor.insertHtml(html_content)
+
+        # Auto-scroll to bottom
+        scrollbar = self.chat_display.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
 
     def _on_message_completed(self, message_id: str, full_content: str) -> None:
         """
-        Handle message completion.
+        Handle message completion with final markdown rendering.
 
         This is Phase 3 of the three-phase streaming protocol.
         """
         self._is_streaming = False
         self._current_message_id = None
+
+        # Ensure final content is rendered with complete markdown
+        if self._streaming_content:
+            self._update_streaming_display()
+
+        # Clear the content buffer
+        self._streaming_content = ""
 
         self.logger.info(
             "Message streaming completed",
@@ -306,8 +345,6 @@ class MainWindowController(QMainWindow):
             message_id=message_id,
             content_length=len(full_content),
         )
-
-        # No visible completion indicator - just clean end to message
 
     def _on_connection_status_changed(self, is_connected: bool) -> None:
         """Update connection status indicator"""
@@ -324,7 +361,9 @@ class MainWindowController(QMainWindow):
                 )
             else:
                 self.status_label.setText("❌ No backend configured - Click to retry")
-            self.status_label.setStyleSheet("color: red; font-weight: bold; text-decoration: underline;")
+            self.status_label.setStyleSheet(
+                "color: red; font-weight: bold; text-decoration: underline;"
+            )
             self.send_icon_button.setEnabled(False)
 
     def _on_status_label_clicked(self, ev) -> None:
@@ -365,9 +404,13 @@ class MainWindowController(QMainWindow):
             )
         else:
             self.status_label.setText("❌ No backend configured - Click to retry")
-        self.status_label.setStyleSheet("color: red; font-weight: bold; text-decoration: underline;")
+        self.status_label.setStyleSheet(
+            "color: red; font-weight: bold; text-decoration: underline;"
+        )
 
-    def _on_provider_detected(self, provider: str, model: str, orchestrator: str) -> None:
+    def _on_provider_detected(
+        self, provider: str, model: str, orchestrator: str
+    ) -> None:
         """Handle provider detection and display optimization info"""
         self.logger.info(
             "Provider detected - optimizations applied",
@@ -453,8 +496,11 @@ class MainWindowController(QMainWindow):
         if not message:
             return
 
-        # Display user message
-        self.chat_display.append(f"\n👤 You: {message}")
+        # Display user message with HTML formatting
+        user_html = f"<br><strong>👤 You:</strong> {message}<br>"
+        cursor = self.chat_display.textCursor()
+        cursor.movePosition(QTextCursor.MoveOperation.End)
+        cursor.insertHtml(user_html)
 
         # Send to WebSocket using correct protocol
         self.websocket_client.send_message(message)

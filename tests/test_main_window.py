@@ -108,9 +108,9 @@ class TestMainWindowController:
         assert main_window._is_streaming is True
         assert main_window._current_message_id == test_message_id
 
-        # Verify assistant header was added with model name and space after colon
+        # Verify assistant header was added with model name (now in HTML format)
         chat_text = main_window.chat_display.toPlainText()
-        assert "🤖 claude-3-5-sonnet-20241022: " in chat_text
+        assert "🤖 claude-3-5-sonnet-20241022:" in chat_text
 
     def test_on_chunk_received_while_streaming(self, main_window):
         """Test chunk received handler while streaming."""

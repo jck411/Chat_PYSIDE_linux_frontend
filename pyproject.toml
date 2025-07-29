@@ -5,6 +5,7 @@ description = "PySide6 chat frontend with optimized WebSocket streaming"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "markdown>=3.8.2",
     "pyside6==6.8.1.1",
     "qasync>=0.27.1",
     "structlog>=25.4.0",

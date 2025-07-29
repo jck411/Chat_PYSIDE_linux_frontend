@@ -7,8 +7,11 @@ Following PROJECT_RULES.md:
 - Keep UI thread under 10ms per frame
 """
 
+from .markdown_formatter import MarkdownFormatter, get_markdown_formatter
 from .settings_dialog import SettingsDialog
 
 __all__ = [
+    "MarkdownFormatter",
     "SettingsDialog",
+    "get_markdown_formatter",
 ]

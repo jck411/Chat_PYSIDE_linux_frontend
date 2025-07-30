@@ -40,6 +40,7 @@ class TestMainWindowController:
         assert hasattr(main_window, "chat_display")
         assert hasattr(main_window, "message_input")
         assert hasattr(main_window, "send_icon_button")
+        assert hasattr(main_window, "clear_icon_button")
         assert hasattr(main_window, "status_label")
 
         # Verify components are properly configured
@@ -88,6 +89,42 @@ class TestMainWindowController:
 
         # Verify no message was sent
         mock_websocket_client.send_message.assert_not_called()
+
+    def test_clear_session(self, main_window, mock_websocket_client):
+        """Test clearing session functionality."""
+        # Set up some chat state
+        main_window.chat_display.setPlainText("Previous chat content")
+        main_window._is_streaming = True
+        main_window._streaming_content = "Some content"
+        main_window._current_message_id = "msg-123"
+        main_window._current_message_start = 100
+
+        # Trigger clear session
+        main_window._clear_session()
+
+        # Verify clear session was called on WebSocket client
+        mock_websocket_client.clear_session.assert_called_once()
+
+    def test_on_session_cleared(self, main_window, mock_websocket_client):
+        """Test session cleared handler."""
+        # Set up some chat state first
+        main_window.chat_display.setPlainText("Previous chat content")
+        main_window._is_streaming = True
+        main_window._streaming_content = "Some content"
+        main_window._current_message_id = "msg-123"
+        main_window._current_message_start = 100
+
+        # Trigger session cleared
+        main_window._on_session_cleared("new-conv-456", "old-conv-123")
+
+        # Verify chat display was cleared
+        assert main_window.chat_display.toPlainText() == ""
+
+        # Verify streaming state was reset
+        assert main_window._is_streaming is False
+        assert main_window._streaming_content == ""
+        assert main_window._current_message_id is None
+        assert main_window._current_message_start == 0
 
     def test_on_message_started(self, main_window, mock_websocket_client):
         """Test message started handler."""

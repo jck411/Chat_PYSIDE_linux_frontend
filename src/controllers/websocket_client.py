@@ -43,6 +43,7 @@ class OptimizedWebSocketClient(QObject):
     connection_status_changed = Signal(bool)
     error_occurred = Signal(str)
     provider_detected = Signal(str, str, str)  # provider, model, orchestrator
+    session_cleared = Signal(str, str)  # new_conversation_id, old_conversation_id
 
     def __init__(self, websocket_url: str | None = None):
         super().__init__()
@@ -147,6 +148,11 @@ class OptimizedWebSocketClient(QObject):
         """Send message to WebSocket server (non-blocking)"""
         if self._loop and not self._loop.is_closed():
             asyncio.run_coroutine_threadsafe(self._send_message(message), self._loop)
+
+    def clear_session(self) -> None:
+        """Clear session and reset conversation (non-blocking)"""
+        if self._loop and not self._loop.is_closed():
+            asyncio.run_coroutine_threadsafe(self._clear_session(), self._loop)
 
     async def _connect(self) -> None:
         """Establish WebSocket connection with provider-optimized settings"""
@@ -331,6 +337,24 @@ class OptimizedWebSocketClient(QObject):
                         elif status == "error":
                             await self._handle_error_message(data, request_id)
 
+                        elif status == "success":
+                            # Handle successful action responses (e.g., clear_session)
+                            action = data.get("action")
+                            if action == "clear_session":
+                                session_data = data.get("data", {})
+                                new_conversation_id = session_data.get("new_conversation_id", "")
+                                old_conversation_id = session_data.get("old_conversation_id", "")
+
+                                self.session_cleared.emit(new_conversation_id, old_conversation_id)
+                                self.logger.info(
+                                    "Session cleared successfully",
+                                    clear_event="session_cleared",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    new_conversation_id=new_conversation_id,
+                                    old_conversation_id=old_conversation_id,
+                                )
+
                     else:
                         self.logger.warning(
                             "Unknown message format received",
@@ -500,6 +524,40 @@ class OptimizedWebSocketClient(QObject):
                 error=str(e),
             )
             self.error_occurred.emit(f"Send failed: {e!s}")
+
+    async def _clear_session(self) -> None:
+        """Send clear session request to WebSocket server"""
+        if not self._websocket or not self._is_connected:
+            self.logger.warning(
+                "Cannot clear session - not connected",
+                send_event="clear_session_not_connected",
+                module=__name__,
+            )
+            return
+
+        try:
+            clear_data = {
+                "action": "clear_session",
+                "request_id": str(uuid.uuid4()),
+            }
+
+            await self._websocket.send(json.dumps(clear_data))
+
+            self.logger.info(
+                "Clear session request sent",
+                send_event="clear_session_sent",
+                module=__name__,
+                request_id=clear_data["request_id"],
+            )
+
+        except Exception as e:
+            self.logger.error(
+                "Failed to send clear session request",
+                send_event="clear_session_error",
+                module=__name__,
+                error=str(e),
+            )
+            self.error_occurred.emit(f"Clear session failed: {e!s}")
 
     async def _handle_connection_lost(self) -> None:
         """Handle lost connection with reconnection logic"""

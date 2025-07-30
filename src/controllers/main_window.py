@@ -240,6 +240,9 @@ class MainWindowController(QMainWindow):
         # Provider detection for automatic optimizations
         self.websocket_client.provider_detected.connect(self._on_provider_detected)
 
+        # Session management
+        self.websocket_client.session_cleared.connect(self._on_session_cleared)
+
     def _setup_theme_signals(self) -> None:
         """Connect theme manager signals for real-time theme updates"""
         self.theme_manager.theme_mode_changed.connect(self._on_theme_changed)
@@ -259,6 +262,15 @@ class MainWindowController(QMainWindow):
         )
         self.theme_icon_button.clicked.connect(self._toggle_theme)
         header_layout.addWidget(self.theme_icon_button)
+
+        # Clear session icon button
+        self.clear_icon_button = MaterialIconButton(
+            icon_resource_path=":/icons/clear_all.svg",
+            size=24,
+            tooltip="Clear Chat & Reset Session",
+        )
+        self.clear_icon_button.clicked.connect(self._clear_session)
+        header_layout.addWidget(self.clear_icon_button)
 
         # Settings icon button
         self.settings_icon_button = MaterialIconButton(
@@ -292,6 +304,10 @@ class MainWindowController(QMainWindow):
         # Update send icon
         if hasattr(self, "send_icon_button"):
             self.send_icon_button.update_theme(current_config)
+
+        # Update clear icon
+        if hasattr(self, "clear_icon_button"):
+            self.clear_icon_button.update_theme(current_config)
 
     def _toggle_theme(self) -> None:
         """Toggle between light and dark themes"""
@@ -527,6 +543,36 @@ class MainWindowController(QMainWindow):
                 use_recoverable_errors=optimizations.get("use_recoverable_errors"),
                 max_retries=optimizations.get("max_retries"),
             )
+
+    def _clear_session(self) -> None:
+        """Clear the current chat session and reset conversation"""
+        # Send clear session request to backend
+        self.websocket_client.clear_session()
+
+        self.logger.info(
+            "Clear session requested by user",
+            session_event="clear_session_requested",
+            module=__name__,
+        )
+
+    def _on_session_cleared(self, new_conversation_id: str, old_conversation_id: str) -> None:
+        """Handle successful session clear from backend"""
+        # Clear the chat display
+        self.chat_display.clear()
+
+        # Reset streaming state
+        self._is_streaming = False
+        self._streaming_content = ""
+        self._current_message_id = None
+        self._current_message_start = 0
+
+        self.logger.info(
+            "Session cleared successfully",
+            session_event="session_cleared_ui",
+            module=__name__,
+            new_conversation_id=new_conversation_id,
+            old_conversation_id=old_conversation_id,
+        )
 
     def _open_settings(self) -> None:
         """Open the settings dialog"""

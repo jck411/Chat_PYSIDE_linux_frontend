@@ -104,6 +104,7 @@ The `resources.qrc` file defines theme-neutral icon resources:
     <file alias="light_mode.svg">icons/light_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg</file>
     <file alias="settings.svg">icons/settings_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
     <file alias="send.svg">icons/send_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
+    <file alias="clear_all.svg">icons/clear_all_24dp_E3E3E3_FILL0_wght400_GRAD0_opsz24.svg</file>
 </qresource>
 ```
 

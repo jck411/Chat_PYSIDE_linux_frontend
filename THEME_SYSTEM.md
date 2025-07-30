@@ -17,12 +17,11 @@ src/themes/
 
 resources/
 ├── resources.qrc            # Qt resource file
-├── themes/
-│   ├── light.qss           # Light theme stylesheet (placeholder)
-│   └── dark.qss            # Dark theme stylesheet (placeholder)
 └── icons/
-    ├── light/              # Light theme icons
-    └── dark/               # Dark theme icons
+    ├── dark_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg
+    ├── light_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg
+    ├── send_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg
+    └── settings_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg
 ```
 
 ### Key Features
@@ -33,7 +32,7 @@ resources/
 - **Performance Optimized**: Cached stylesheet generation, <10ms switching
 - **Signal-based Updates**: Qt signals for component synchronization
 - **Environment Support**: `CHAT_THEME_MODE` environment variable
-- **Resource Ready**: Prepared structure for Material Design Icons
+- **Dynamic Icon Coloring**: Theme-neutral SVG icons with programmatic coloring
 
 ## Usage
 
@@ -97,27 +96,24 @@ The main window automatically includes a theme toggle button:
 
 ### QRC Structure
 
-The `resources.qrc` file defines theme-aware resources:
+The `resources.qrc` file defines theme-neutral icon resources:
 
 ```xml
-<qresource prefix="/themes">
-    <file alias="light.qss">themes/light.qss</file>
-    <file alias="dark.qss">themes/dark.qss</file>
-</qresource>
-
 <qresource prefix="/icons">
-    <file alias="light/theme_toggle.svg">icons/light/theme_toggle.svg</file>
-    <file alias="dark/theme_toggle.svg">icons/dark/theme_toggle.svg</file>
-    <!-- Additional Material Design Icons -->
+    <file alias="dark_mode.svg">icons/dark_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg</file>
+    <file alias="light_mode.svg">icons/light_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg</file>
+    <file alias="settings.svg">icons/settings_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
+    <file alias="send.svg">icons/send_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
 </qresource>
 ```
 
 ### Icon System
 
-Icons are organized by theme with appropriate colors:
+Icons use Material Design specifications with theme-neutral base colors that are dynamically recolored:
 
-- **Light Theme Icons**: Use primary colors (#1976D2, #4CAF50, #F44336)
-- **Dark Theme Icons**: Use light variants (#90CAF9, #66BB6A, #EF5350)
+- **Base Color**: `#565F89` (theme-neutral gray)
+- **Dynamic Coloring**: IconButton applies theme-appropriate colors programmatically
+- **Performance**: Single icon file per symbol, colored at runtime
 
 ## Implementation Details
 
@@ -173,18 +169,13 @@ uv run pytest tests/ --cov=src.themes
 
 ## Future Enhancements
 
-### Material Design Icons Integration
-
-1. **Icon Compilation**: Add `pyside6-rcc` to build process
-2. **Dynamic Icons**: Theme-aware icon switching in UI components
-3. **Icon Library**: Expand icon set for additional UI elements
-
 ### Advanced Features
 
 1. **System Theme Detection**: Auto-switch based on OS theme
 2. **Custom Themes**: User-defined color schemes
 3. **Animation**: Smooth theme transition effects
 4. **High Contrast**: Accessibility theme variants
+5. **Additional Icons**: Expand Material Design icon set
 
 ## Troubleshooting
 
@@ -193,6 +184,7 @@ uv run pytest tests/ --cov=src.themes
 1. **Theme Not Applied**: Ensure `theme_manager.apply_current_theme()` called
 2. **Icons Missing**: Check resource compilation with `pyside6-rcc`
 3. **Performance Issues**: Clear stylesheet cache with `clear_cache()`
+4. **Icon Colors Wrong**: Verify IconButton theme updates via signals
 
 ### Debug Information
 
@@ -208,10 +200,10 @@ print(get_app_config().theme_preference)
 
 ## Integration with Plan
 
-This implementation completes the theme system and prepares for:
+This implementation completes the theme system with:
 
 - **Resource Files Structure** (Priority 3): ✅ Complete
-- **Material Design Icons**: 🔄 Ready for integration
-- **CI Pipeline**: 🔄 Resource compilation step prepared
+- **Material Design Icons**: ✅ Implemented with dynamic coloring
+- **CI Pipeline**: ✅ Resource compilation integrated
 
-The theme system is production-ready and follows all project guidelines while providing a solid foundation for future enhancements.
+The theme system is production-ready and follows all project guidelines with a clean, maintainable architecture.

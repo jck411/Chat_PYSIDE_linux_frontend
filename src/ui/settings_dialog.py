@@ -74,36 +74,12 @@ class SettingsDialog(QDialog):
 
         self.apply_button = QPushButton("Apply")
         self.apply_button.clicked.connect(self._apply_settings)
-        self.apply_button.setStyleSheet(
-            """
-            QPushButton {
-                padding: 4px 12px;
-                font-size: 12px;
-            }
-        """
-        )
 
         self.ok_button = QPushButton("OK")
         self.ok_button.clicked.connect(self._ok_clicked)
-        self.ok_button.setStyleSheet(
-            """
-            QPushButton {
-                padding: 4px 12px;
-                font-size: 12px;
-            }
-        """
-        )
 
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.clicked.connect(self.reject)
-        self.cancel_button.setStyleSheet(
-            """
-            QPushButton {
-                padding: 4px 12px;
-                font-size: 12px;
-            }
-        """
-        )
 
         button_layout.addStretch()
         button_layout.addWidget(self.apply_button)

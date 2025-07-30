@@ -174,6 +174,11 @@ class ThemeApplier(QObject):
             font-size: 10px;
             padding: 5px;
         }}
+
+        QLabel[class="websocket-url"] {{
+            color: {colors.primary};
+            font-family: monospace;
+        }}
         """
 
         # Scrollbar styling
@@ -231,6 +236,47 @@ class ThemeApplier(QObject):
         }}
         """
 
+        # Dialog and settings styling (conservative approach)
+        dialog_style = f"""
+        QDialog {{
+            background-color: {colors.background};
+            color: {colors.on_background};
+        }}
+
+        QTabWidget::pane {{
+            background-color: {colors.surface};
+            border: 1px solid {colors.outline_variant};
+        }}
+
+        QTabBar::tab {{
+            background-color: {colors.surface_variant};
+            color: {colors.on_surface_variant};
+            padding: 8px 16px;
+            border-radius: 4px;
+        }}
+
+        QTabBar::tab:selected {{
+            background-color: {theme_config.button_background};
+            color: {colors.on_primary};
+        }}
+
+        QGroupBox {{
+            background-color: {colors.surface};
+            color: {colors.on_surface};
+            border: 1px solid {colors.outline_variant};
+            border-radius: 4px;
+            margin-top: 6px;
+            padding-top: 6px;
+        }}
+
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            left: 8px;
+            padding: 0 4px;
+            color: {colors.on_surface};
+        }}
+        """
+
         # Combine all styles
         complete_stylesheet = f"""
         /* Material Design 3 Theme: {theme_config.name} */
@@ -241,6 +287,7 @@ class ThemeApplier(QObject):
         {label_style}
         {scrollbar_style}
         {menu_style}
+        {dialog_style}
         """
 
         return complete_stylesheet.strip()

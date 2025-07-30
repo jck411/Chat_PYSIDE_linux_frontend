@@ -75,7 +75,7 @@ class BackendSettingsWidget(QWidget):
 
         # WebSocket URL preview
         self.websocket_url_label = QLabel("N/A")
-        self.websocket_url_label.setStyleSheet("color: blue; font-family: monospace;")
+        self.websocket_url_label.setProperty("class", "websocket-url")
         details_layout.addRow("WebSocket URL:", self.websocket_url_label)
 
         layout.addWidget(details_group)

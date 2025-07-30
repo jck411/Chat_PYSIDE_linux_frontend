@@ -1,31 +1,10 @@
 <!DOCTYPE RCC>
 <RCC version="1.0">
-    <qresource prefix="/themes">
-        <!-- Light theme resources -->
-        <file alias="light.qss">themes/light.qss</file>
-
-        <!-- Dark theme resources -->
-        <file alias="dark.qss">themes/dark.qss</file>
-    </qresource>
-
     <qresource prefix="/icons">
         <!-- Material Design Icons (theme-neutral, color applied dynamically) -->
         <file alias="dark_mode.svg">icons/dark_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg</file>
         <file alias="light_mode.svg">icons/light_mode_24dp_565F89_FILL0_wght400_GRAD0_opsz24.svg</file>
         <file alias="settings.svg">icons/settings_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
         <file alias="send.svg">icons/send_24dp_565F89_FILL1_wght400_GRAD0_opsz24.svg</file>
-
-        <!-- Legacy theme-specific icons (for fallback) -->
-        <file alias="light/theme_toggle.svg">icons/light/theme_toggle.svg</file>
-        <file alias="light/send.svg">icons/light/send.svg</file>
-        <file alias="light/settings.svg">icons/light/settings.svg</file>
-        <file alias="light/connect.svg">icons/light/connect.svg</file>
-        <file alias="light/disconnect.svg">icons/light/disconnect.svg</file>
-
-        <file alias="dark/theme_toggle.svg">icons/dark/theme_toggle.svg</file>
-        <file alias="dark/send.svg">icons/dark/send.svg</file>
-        <file alias="dark/settings.svg">icons/dark/settings.svg</file>
-        <file alias="dark/connect.svg">icons/dark/connect.svg</file>
-        <file alias="dark/disconnect.svg">icons/dark/disconnect.svg</file>
     </qresource>
 </RCC>

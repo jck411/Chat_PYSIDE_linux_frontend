@@ -39,7 +39,7 @@ class BackendSettingsWidget(QWidget):
         self.logger = structlog.get_logger(__name__)
         self.config_manager = get_config_manager()
         self.is_new_profile_mode = False
-        self.original_values = {}  # Track original values for edit detection
+        self.original_values: dict[str, Any] = {}  # Track original values for edit detection
 
         self._setup_ui()
         self._load_current_settings()
@@ -135,7 +135,7 @@ class BackendSettingsWidget(QWidget):
         elif not self.is_new_profile_mode:
             self._clear_backend_details()
 
-    def _store_original_values(self, profile) -> None:
+    def _store_original_values(self, profile: Any) -> None:
         """Store original values for change detection"""
         self.original_values = {
             "name": profile.name,
@@ -149,7 +149,7 @@ class BackendSettingsWidget(QWidget):
         if self.is_new_profile_mode:
             return bool(self.name_edit.text().strip() or self.host_edit.text().strip())
 
-        return (
+        return bool(
             self.name_edit.text().strip() != self.original_values.get("name", "")
             or self.host_edit.text().strip() != self.original_values.get("host", "")
             or self.port_edit.value() != self.original_values.get("port", 8000)

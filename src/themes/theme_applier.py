@@ -236,44 +236,36 @@ class ThemeApplier(QObject):
         }}
         """
 
-        # Dialog and settings styling (conservative approach)
+        # Dialog styling (minimal fix)
         dialog_style = f"""
-        QDialog {{
+        QDialog, QDialog * {{
             background-color: {colors.background};
             color: {colors.on_background};
         }}
 
-        QTabWidget::pane {{
-            background-color: {colors.surface};
+        QGroupBox {{
             border: 1px solid {colors.outline_variant};
+            padding-top: 10px;
+            margin-top: 5px;
         }}
 
-        QTabBar::tab {{
-            background-color: {colors.surface_variant};
-            color: {colors.on_surface_variant};
-            padding: 8px 16px;
-            border-radius: 4px;
-        }}
-
-        QTabBar::tab:selected {{
+        QDialog QPushButton {{
             background-color: {theme_config.button_background};
             color: {colors.on_primary};
-        }}
-
-        QGroupBox {{
-            background-color: {colors.surface};
-            color: {colors.on_surface};
-            border: 1px solid {colors.outline_variant};
+            border: none;
             border-radius: 4px;
-            margin-top: 6px;
-            padding-top: 6px;
+            padding: 6px 12px;
         }}
 
-        QGroupBox::title {{
-            subcontrol-origin: margin;
-            left: 8px;
-            padding: 0 4px;
-            color: {colors.on_surface};
+        QDialog QComboBox, QDialog QSpinBox, QDialog QLineEdit {{
+            background-color: {colors.surface_variant};
+        }}
+
+        QDialog QCheckBox::indicator:unchecked {{
+            background-color: {colors.surface_variant};
+            border: 1px solid {colors.outline};
+            width: 16px;
+            height: 16px;
         }}
         """
 

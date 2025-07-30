@@ -98,7 +98,9 @@ class FontManager:
 
         return font
 
-    def get_chat_font(self, family: str | None = None, size: int | None = None) -> QFont:
+    def get_chat_font(
+        self, family: str | None = None, size: int | None = None
+    ) -> QFont:
         """Get chat font with fallback to defaults"""
         family = family or self.DEFAULT_CHAT_FONT[0]
         size = size or self.DEFAULT_CHAT_FONT[1]

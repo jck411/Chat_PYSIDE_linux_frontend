@@ -31,6 +31,7 @@ from .websocket_client import OptimizedWebSocketClient
 
 class ClickableLabel(QLabel):
     """A clickable QLabel that emits a clicked signal"""
+
     clicked = Signal()
 
     def mousePressEvent(self, event: Any) -> None:
@@ -49,6 +50,8 @@ class MainWindow(QMainWindow):
     - Optimized font management
     - Signal-based architecture
     """
+
+
 try:
     from .. import resources_rc
 except ImportError:
@@ -133,7 +136,7 @@ class MainWindowController(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)  # Improved spacing between elements
 
-                # Left side: Connection status (clickable when disconnected)
+        # Left side: Connection status (clickable when disconnected)
         self.status_label = ClickableLabel("Connecting...")
         self.status_label.setStyleSheet(
             "color: orange; font-weight: bold; padding: 5px;"
@@ -183,8 +186,7 @@ class MainWindowController(QMainWindow):
         """Apply chat font from configuration using font manager"""
         font_config = self.config_manager.get_font_config()
         chat_font = self.font_manager.get_chat_font(
-            font_config["chat_font_family"],
-            font_config["chat_font_size"]
+            font_config["chat_font_family"], font_config["chat_font_size"]
         )
         # Apply chat font to chat display and message input for consistent typing experience
         self.chat_display.setFont(chat_font)

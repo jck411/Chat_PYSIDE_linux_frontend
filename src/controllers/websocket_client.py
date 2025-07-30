@@ -174,10 +174,7 @@ class OptimizedWebSocketClient(QObject):
             )
 
             # Establish connection with provider-optimized settings
-            self._websocket = await websockets.connect(
-                self.websocket_url,
-                **ws_config
-            )
+            self._websocket = await websockets.connect(self.websocket_url, **ws_config)
 
             self._is_connected = True
             self._reconnect_attempts = 0
@@ -257,14 +254,20 @@ class OptimizedWebSocketClient(QObject):
                                     # Auto-detect and configure provider optimizations
                                     provider_info = metadata.get("provider_info")
                                     if provider_info:
-                                        provider_changed = self.provider_config.update_provider_info(provider_info)
+                                        provider_changed = (
+                                            self.provider_config.update_provider_info(
+                                                provider_info
+                                            )
+                                        )
 
                                         if provider_changed:
                                             # Emit provider detection signal
                                             self.provider_detected.emit(
                                                 provider_info.get("provider", ""),
                                                 provider_info.get("model", ""),
-                                                provider_info.get("orchestrator_type", "")
+                                                provider_info.get(
+                                                    "orchestrator_type", ""
+                                                ),
                                             )
 
                                             # Log provider-specific optimization applied
@@ -298,7 +301,9 @@ class OptimizedWebSocketClient(QObject):
                                 metadata = chunk.get("metadata")
                                 if metadata and "provider_info" in metadata:
                                     provider_info = metadata["provider_info"]
-                                    self.provider_config.update_provider_info(provider_info)
+                                    self.provider_config.update_provider_info(
+                                        provider_info
+                                    )
 
                                 # Apply provider-specific chunk processing
                                 optimizations = self.provider_config.get_optimizations()

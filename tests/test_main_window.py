@@ -98,7 +98,7 @@ class TestMainWindowController:
         mock_websocket_client.get_provider_info.return_value = {
             "provider": "anthropic",
             "model": "claude-3-5-sonnet-20241022",
-            "orchestrator": "AnthropicOrchestrator"
+            "orchestrator": "AnthropicOrchestrator",
         }
 
         # Trigger message started
@@ -185,7 +185,9 @@ class TestMainWindowController:
         # Verify send button is disabled
         assert not main_window.send_icon_button.isEnabled()
 
-    def test_status_label_click_when_disconnected(self, main_window, mock_websocket_client):
+    def test_status_label_click_when_disconnected(
+        self, main_window, mock_websocket_client
+    ):
         """Test clicking status label when disconnected triggers reconnection."""
         # Set up disconnected state
         mock_websocket_client.is_connected = False

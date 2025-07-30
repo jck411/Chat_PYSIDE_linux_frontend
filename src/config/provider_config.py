@@ -88,7 +88,6 @@ class ProviderConfigManager:
                 connection_pool_size=1,
                 keep_alive=True,
             ),
-
             ProviderType.OPENAI: ProviderOptimizations(
                 # OpenAI optimizations
                 immediate_processing=True,
@@ -104,7 +103,6 @@ class ProviderConfigManager:
                 connection_pool_size=1,
                 keep_alive=True,
             ),
-
             ProviderType.UNKNOWN: ProviderOptimizations(
                 # Conservative defaults for unknown providers
                 immediate_processing=True,
@@ -150,9 +148,9 @@ class ProviderConfigManager:
 
         # Check if provider changed
         provider_changed = (
-            new_provider != self._current_provider or
-            model != self._current_model or
-            orchestrator != self._current_orchestrator
+            new_provider != self._current_provider
+            or model != self._current_model
+            or orchestrator != self._current_orchestrator
         )
 
         if provider_changed:
@@ -163,8 +161,7 @@ class ProviderConfigManager:
 
             # Update optimizations
             self._optimizations = self._provider_configs.get(
-                new_provider,
-                self._get_default_optimizations()
+                new_provider, self._get_default_optimizations()
             )
 
             self.logger.info(
@@ -211,7 +208,9 @@ class ProviderConfigManager:
             "ping_interval": self._optimizations.ping_interval,
             "ping_timeout": self._optimizations.ping_timeout,
             "max_size": self._optimizations.max_message_size,
-            "compression": self._optimizations.compression_level if self._optimizations.use_compression else None,
+            "compression": self._optimizations.compression_level
+            if self._optimizations.use_compression
+            else None,
         }
 
     def get_provider_summary(self) -> dict[str, Any]:
@@ -226,7 +225,7 @@ class ProviderConfigManager:
                 "use_recoverable_errors": self._optimizations.use_recoverable_errors,
                 "max_retries": self._optimizations.max_retries,
                 "ping_interval": self._optimizations.ping_interval,
-            }
+            },
         }
 
 

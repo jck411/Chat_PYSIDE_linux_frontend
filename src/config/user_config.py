@@ -87,7 +87,8 @@ class UIConfig:
         font_data = data.get("font_config", {})
         # Filter out old UI font fields for backward compatibility
         filtered_font_data = {
-            key: value for key, value in font_data.items()
+            key: value
+            for key, value in font_data.items()
             if key in ["chat_font_family", "chat_font_size"]
         }
         font_config = FontConfig(**filtered_font_data)
@@ -98,7 +99,7 @@ class UIConfig:
             theme=theme,
             window_geometry=geometry,
             font_config=font_config,
-            backend_profiles=backend_profiles
+            backend_profiles=backend_profiles,
         )
 
 

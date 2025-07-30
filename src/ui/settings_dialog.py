@@ -31,7 +31,8 @@ class SettingsDialog(QDialog):
     - Composed of focused widgets
     - Signal-based updates
     - Type-safe initialization
-    """    # Signals (aggregate from child components)
+    """  # Signals (aggregate from child components)
+
     backend_changed = Signal(str)  # profile_id
     theme_changed = Signal(str)  # theme name
     font_changed = Signal()  # font configuration changed
@@ -147,9 +148,9 @@ class SettingsDialog(QDialog):
         """Clean up resources when dialog is closed"""
         try:
             # Cleanup component widgets if they have cleanup methods
-            for widget_name in ['backend_widget', 'ui_widget']:
+            for widget_name in ["backend_widget", "ui_widget"]:
                 widget = getattr(self, widget_name, None)
-                if widget and hasattr(widget, 'cleanup'):
+                if widget and hasattr(widget, "cleanup"):
                     try:
                         widget.cleanup()
                     except Exception as widget_error:

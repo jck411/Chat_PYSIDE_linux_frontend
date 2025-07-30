@@ -53,7 +53,9 @@ class BackendSettingsWidget(QWidget):
         selection_layout = QFormLayout(selection_group)
 
         self.backend_combo = QComboBox()
-        self.backend_combo.currentTextChanged.connect(self._on_backend_selection_changed)
+        self.backend_combo.currentTextChanged.connect(
+            self._on_backend_selection_changed
+        )
         selection_layout.addRow("Active Backend:", self.backend_combo)
         layout.addWidget(selection_group)
 
@@ -148,10 +150,11 @@ class BackendSettingsWidget(QWidget):
             return bool(self.name_edit.text().strip() or self.host_edit.text().strip())
 
         return (
-            self.name_edit.text().strip() != self.original_values.get("name", "") or
-            self.host_edit.text().strip() != self.original_values.get("host", "") or
-            self.port_edit.value() != self.original_values.get("port", 8000) or
-            self.ssl_checkbox.isChecked() != self.original_values.get("use_ssl", False)
+            self.name_edit.text().strip() != self.original_values.get("name", "")
+            or self.host_edit.text().strip() != self.original_values.get("host", "")
+            or self.port_edit.value() != self.original_values.get("port", 8000)
+            or self.ssl_checkbox.isChecked()
+            != self.original_values.get("use_ssl", False)
         )
 
     def _clear_backend_details(self) -> None:
@@ -236,7 +239,7 @@ class BackendSettingsWidget(QWidget):
 
             self.config_manager.add_backend_profile(
                 profile_id, name, host, port, use_ssl, f"Custom profile: {name}"
-            )            # Exit new profile mode and reload
+            )  # Exit new profile mode and reload
             self.is_new_profile_mode = False
             self.backend_combo.setEnabled(True)
             self._load_current_settings()
@@ -341,7 +344,9 @@ class BackendSettingsWidget(QWidget):
                 self.action_button.setText("Add New")
 
             self.action_button.setEnabled(True)
-            self.delete_button.setEnabled(has_selection and not self.is_new_profile_mode)
+            self.delete_button.setEnabled(
+                has_selection and not self.is_new_profile_mode
+            )
 
     def apply_settings(self) -> None:
         """Apply current backend selection"""

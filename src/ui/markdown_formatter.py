@@ -61,8 +61,12 @@ class MarkdownFormatter(QObject):
         if not markdown_text.strip():
             return ""
 
+        # Fix list indentation: normalize to 4 spaces for proper nesting
+        import re
+        processed_text = re.sub(r'^(\s{1,3})([-*+]\s+)', r'    \2', markdown_text, flags=re.MULTILINE)
+
         # Convert markdown to HTML
-        html_content = self.md.convert(markdown_text)
+        html_content = self.md.convert(processed_text)
 
         # Reset markdown processor for next use
         self.md.reset()
@@ -157,6 +161,17 @@ class MarkdownFormatter(QObject):
         }}
         li {{
             margin: 4px 0;
+        }}
+
+        /* Nested lists */
+        li > ul, li > ol {{
+            margin: 4px 0;
+            padding-left: 20px;
+        }}
+
+        /* List items containing nested lists */
+        li > p:last-child {{
+            margin-bottom: 4px;
         }}
 
         /* Blockquotes */

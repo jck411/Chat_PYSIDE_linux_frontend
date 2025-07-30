@@ -350,12 +350,60 @@ class OptimizedWebSocketClient(QObject):
             )
             await self._handle_connection_lost()
 
-        except Exception as e:
+        except websockets.exceptions.InvalidURI as e:
             self.logger.error(
-                "Message listener error",
-                listener_event="message_listener_error",
+                "Invalid WebSocket URI",
+                connect_event="websocket_invalid_uri",
                 module=__name__,
                 error=str(e),
+            )
+            self.error_occurred.emit(f"Invalid WebSocket URI: {e!s}")
+
+        except websockets.exceptions.InvalidHandshake as e:
+            self.logger.error(
+                "WebSocket handshake failed",
+                connect_event="websocket_handshake_failed",
+                module=__name__,
+                error=str(e),
+            )
+            self.error_occurred.emit(f"WebSocket handshake failed: {e!s}")
+            await self._schedule_reconnect()
+
+        except TimeoutError:
+            self.logger.error(
+                "WebSocket connection timeout",
+                connect_event="websocket_timeout",
+                module=__name__,
+            )
+            self.error_occurred.emit("Connection timeout")
+            await self._schedule_reconnect()
+
+        except (OSError, ConnectionRefusedError) as e:
+            self.logger.error(
+                "Network connection error",
+                connect_event="websocket_network_error",
+                module=__name__,
+                error=str(e),
+            )
+            self.error_occurred.emit(f"Network error: {e!s}")
+            await self._schedule_reconnect()
+
+        except json.JSONDecodeError as e:
+            self.logger.error(
+                "Invalid JSON in WebSocket message",
+                parse_event="websocket_json_error",
+                module=__name__,
+                error=str(e),
+            )
+            # Continue listening for more messages
+
+        except Exception as e:
+            self.logger.error(
+                "Unexpected message listener error",
+                listener_event="message_listener_unexpected_error",
+                module=__name__,
+                error=str(e),
+                error_type=type(e).__name__,
             )
             await self._handle_connection_lost()
 
@@ -524,18 +572,69 @@ class OptimizedWebSocketClient(QObject):
         return self.provider_config.get_provider_summary()
 
     def cleanup(self) -> None:
-        """Clean shutdown of WebSocket client"""
-        self._should_reconnect = False
-        self.disconnect_from_backend()
+        """Clean shutdown of WebSocket client with comprehensive resource cleanup"""
+        try:
+            self._should_reconnect = False
 
-        if self._loop and not self._loop.is_closed():
-            self._loop.call_soon_threadsafe(self._loop.stop)
+            # Disconnect from backend
+            try:
+                self.disconnect_from_backend()
+            except Exception as e:
+                self.logger.warning(
+                    "Error during WebSocket disconnect",
+                    cleanup_event="websocket_disconnect_error",
+                    module=__name__,
+                    error=str(e),
+                )
 
-        if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=5.0)
+            # Stop and close event loop
+            if self._loop and not self._loop.is_closed():
+                try:
+                    self._loop.call_soon_threadsafe(self._loop.stop)
+                    # Wait briefly for loop to stop
+                    time.sleep(0.1)
+                except RuntimeError as e:
+                    self.logger.warning(
+                        "Error stopping event loop",
+                        cleanup_event="event_loop_stop_error",
+                        module=__name__,
+                        error=str(e),
+                    )
 
-        self.logger.info(
-            "WebSocket client cleaned up",
-            cleanup_event="websocket_cleanup",
-            module=__name__,
-        )
+            # Clean up thread
+            if self._thread and self._thread.is_alive():
+                try:
+                    self._thread.join(timeout=5.0)
+                    if self._thread.is_alive():
+                        self.logger.warning(
+                            "WebSocket thread did not terminate within timeout",
+                            cleanup_event="thread_timeout",
+                            module=__name__,
+                        )
+                except Exception as e:
+                    self.logger.warning(
+                        "Error joining WebSocket thread",
+                        cleanup_event="thread_join_error",
+                        module=__name__,
+                        error=str(e),
+                    )
+
+            # Clear references to prevent memory leaks
+            self._websocket = None
+            self._thread = None
+            # Note: Don't close the loop here as it might be shared
+
+            self.logger.info(
+                "WebSocket client cleaned up successfully",
+                cleanup_event="websocket_cleanup_complete",
+                module=__name__,
+            )
+
+        except Exception as e:
+            self.logger.error(
+                "Unexpected error during WebSocket cleanup",
+                cleanup_event="websocket_cleanup_error",
+                module=__name__,
+                error=str(e),
+                error_type=type(e).__name__,
+            )

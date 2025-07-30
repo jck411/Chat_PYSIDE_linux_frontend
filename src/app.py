@@ -119,14 +119,26 @@ def main() -> None:
             port = args.port or 8000
             use_ssl = args.ssl or False
 
-        config_manager.add_backend_profile(
-            "cli_override",
-            profile_name,
-            host,
-            port,
-            use_ssl,
-            "Temporary profile from command line arguments",
-        )
+        # Update or create CLI override profile
+        try:
+            config_manager.update_backend_profile(
+                "cli_override",
+                profile_name,
+                host,
+                port,
+                use_ssl,
+                "Temporary profile from command line arguments",
+            )
+        except ValueError:
+            # Profile doesn't exist, create it
+            config_manager.add_backend_profile(
+                "cli_override",
+                profile_name,
+                host,
+                port,
+                use_ssl,
+                "Temporary profile from command line arguments",
+            )
         config_manager.set_active_backend("cli_override")
 
     logger = structlog.get_logger(__name__)

@@ -134,27 +134,7 @@ class ConfigManager:
         return {
             "chat_font_family": font_config.chat_font_family,
             "chat_font_size": font_config.chat_font_size,
-            "ui_font_family": font_config.ui_font_family,
-            "ui_font_size": font_config.ui_font_size,
         }
-
-    def set_font_config(
-        self,
-        chat_font_family: str,
-        chat_font_size: int,
-        ui_font_family: str,
-        ui_font_size: int
-    ) -> None:
-        """Set complete font configuration"""
-        from .user_config import FontConfig
-
-        font_config = FontConfig(
-            chat_font_family=chat_font_family,
-            chat_font_size=chat_font_size,
-            ui_font_family=ui_font_family,
-            ui_font_size=ui_font_size
-        )
-        self.user_config.set_font_config(font_config)
 
     def set_chat_font(self, family: str, size: int) -> None:
         """Set chat font family and size"""
@@ -163,18 +143,6 @@ class ConfigManager:
         self.logger.info(
             "Chat font changed via config manager",
             config_event="chat_font_changed",
-            module=__name__,
-            font_family=family,
-            font_size=size,
-        )
-
-    def set_ui_font(self, family: str, size: int) -> None:
-        """Set UI font family and size"""
-        self.user_config.set_ui_font(family, size)
-
-        self.logger.info(
-            "UI font changed via config manager",
-            config_event="ui_font_changed",
             module=__name__,
             font_family=family,
             font_size=size,

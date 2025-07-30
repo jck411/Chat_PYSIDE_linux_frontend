@@ -86,8 +86,7 @@ class ThemeApplier(QObject):
             border: 1px solid {colors.outline_variant};
             border-radius: 8px;
             padding: 12px;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 11px;
+            /* Font will be set programmatically via setFont() to respect user preferences */
             line-height: 1.4;
             selection-background-color: {colors.primary_container};
             selection-color: {colors.on_primary_container};
@@ -106,7 +105,7 @@ class ThemeApplier(QObject):
             border: 1px solid {colors.outline_variant};
             border-radius: 6px;
             padding: 8px 12px;
-            font-size: 12px;
+            /* Font will be set programmatically via setFont() to respect user preferences */
             min-height: 20px;
         }}
 

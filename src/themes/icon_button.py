@@ -173,12 +173,33 @@ class MaterialIconButton(QPushButton):
 
             return QIcon(colored_pixmap)
 
-        except Exception as e:
+        except OSError as e:
             self.logger.error(
-                "Failed to create colored icon",
-                icon_event="icon_creation_failed",
+                "File I/O error creating colored icon",
+                icon_event="icon_file_error",
                 module=__name__,
                 error=str(e),
+                resource_path=self._icon_resource_path,
+            )
+            return None
+
+        except (ValueError, TypeError) as e:
+            self.logger.error(
+                "Invalid parameters for icon creation",
+                icon_event="icon_parameter_error",
+                module=__name__,
+                error=str(e),
+                resource_path=self._icon_resource_path,
+            )
+            return None
+
+        except Exception as e:
+            self.logger.error(
+                "Unexpected error creating colored icon",
+                icon_event="icon_creation_unexpected_error",
+                module=__name__,
+                error=str(e),
+                error_type=type(e).__name__,
                 resource_path=self._icon_resource_path,
             )
             return None

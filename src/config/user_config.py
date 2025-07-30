@@ -47,15 +47,11 @@ class FontConfig:
 
     chat_font_family: str = "monospace"
     chat_font_size: int = 10
-    ui_font_family: str = "sans-serif"
-    ui_font_size: int = 9
 
     def __post_init__(self) -> None:
         """Validate font values"""
         if self.chat_font_size < 8 or self.chat_font_size > 24:
             raise ValueError("Chat font size must be between 8 and 24")
-        if self.ui_font_size < 8 or self.ui_font_size > 16:
-            raise ValueError("UI font size must be between 8 and 16")
 
 
 @dataclass
@@ -89,7 +85,12 @@ class UIConfig:
         geometry = WindowGeometry(**geometry_data)
 
         font_data = data.get("font_config", {})
-        font_config = FontConfig(**font_data)
+        # Filter out old UI font fields for backward compatibility
+        filtered_font_data = {
+            key: value for key, value in font_data.items()
+            if key in ["chat_font_family", "chat_font_size"]
+        }
+        font_config = FontConfig(**filtered_font_data)
 
         backend_profiles = data.get("backend_profiles", {})
 
@@ -175,13 +176,63 @@ class UserConfig:
                 version=self._version,
             )
 
-        except Exception as e:
+        except FileNotFoundError:
+            self.logger.info(
+                "User configuration file not found, using defaults",
+                config_event="config_file_not_found",
+                module=__name__,
+                config_path=str(self.config_path),
+            )
+            # Continue with defaults
+
+        except json.JSONDecodeError as e:
             self.logger.error(
-                "Failed to load user configuration",
-                config_event="config_load_failed",
+                "Invalid JSON in user configuration file",
+                config_event="config_json_invalid",
                 module=__name__,
                 config_path=str(self.config_path),
                 error=str(e),
+            )
+            # Continue with defaults
+
+        except (KeyError, TypeError, ValueError) as e:
+            self.logger.error(
+                "Invalid configuration data structure",
+                config_event="config_data_invalid",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+            )
+            # Continue with defaults
+
+        except PermissionError as e:
+            self.logger.error(
+                "Permission denied reading configuration file",
+                config_event="config_permission_denied",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+            )
+            # Continue with defaults
+
+        except OSError as e:
+            self.logger.error(
+                "File system error reading configuration",
+                config_event="config_os_error",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+            )
+            # Continue with defaults
+
+        except Exception as e:
+            self.logger.error(
+                "Unexpected error loading user configuration",
+                config_event="config_load_unexpected_error",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+                error_type=type(e).__name__,
             )
             # Continue with defaults
 
@@ -215,15 +266,46 @@ class UserConfig:
                 config_path=str(self.config_path),
             )
 
-        except Exception as e:
+        except PermissionError as e:
             self.logger.error(
-                "Failed to save user configuration",
-                config_event="config_save_failed",
+                "Permission denied writing configuration file",
+                config_event="config_save_permission_denied",
                 module=__name__,
                 config_path=str(self.config_path),
                 error=str(e),
             )
-            raise OSError(f"Failed to save configuration: {e}") from e
+            raise OSError(f"Permission denied saving configuration: {e}") from e
+
+        except OSError as e:
+            self.logger.error(
+                "File system error saving configuration",
+                config_event="config_save_os_error",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+            )
+            raise OSError(f"File system error saving configuration: {e}") from e
+
+        except (TypeError, ValueError) as e:
+            self.logger.error(
+                "Invalid configuration data for JSON serialization",
+                config_event="config_save_data_error",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+            )
+            raise OSError(f"Invalid configuration data: {e}") from e
+
+        except Exception as e:
+            self.logger.error(
+                "Unexpected error saving user configuration",
+                config_event="config_save_unexpected_error",
+                module=__name__,
+                config_path=str(self.config_path),
+                error=str(e),
+                error_type=type(e).__name__,
+            )
+            raise OSError(f"Unexpected error saving configuration: {e}") from e
 
     def get_theme_preference(self) -> ThemePreference:
         """Get current theme preference"""
@@ -271,7 +353,6 @@ class UserConfig:
             config_event="font_updated",
             module=__name__,
             chat_font=f"{font_config.chat_font_family} {font_config.chat_font_size}px",
-            ui_font=f"{font_config.ui_font_family} {font_config.ui_font_size}px",
         )
 
     def set_chat_font(self, family: str, size: int) -> None:
@@ -283,20 +364,6 @@ class UserConfig:
         self.logger.info(
             "Chat font updated",
             config_event="chat_font_updated",
-            module=__name__,
-            font_family=family,
-            font_size=size,
-        )
-
-    def set_ui_font(self, family: str, size: int) -> None:
-        """Set UI font family and size"""
-        self.ui_config.font_config.ui_font_family = family
-        self.ui_config.font_config.ui_font_size = size
-        self.save()
-
-        self.logger.info(
-            "UI font updated",
-            config_event="ui_font_updated",
             module=__name__,
             font_family=family,
             font_size=size,

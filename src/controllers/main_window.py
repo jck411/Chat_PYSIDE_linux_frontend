@@ -12,7 +12,7 @@ from typing import Any
 
 import structlog
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QTextCursor
+from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..config import get_config_manager
-from ..themes import MaterialIconButton, ThemeMode, get_theme_manager
+from ..themes import MaterialIconButton, ThemeMode, get_font_manager, get_theme_manager
 from ..ui import SettingsDialog, get_markdown_formatter
 from .websocket_client import OptimizedWebSocketClient
 
@@ -54,6 +54,9 @@ class MainWindowController(QMainWindow):
         # Get configuration manager
         self.config_manager = get_config_manager()
 
+        # Initialize font manager
+        self.font_manager = get_font_manager()
+
         # Initialize theme manager
         self.theme_manager = get_theme_manager()
         self._setup_theme_signals()
@@ -76,6 +79,9 @@ class MainWindowController(QMainWindow):
 
         # Apply initial theme
         self.theme_manager.apply_current_theme()
+
+        # Apply initial font configuration
+        self.apply_font_config()
 
         # Auto-connect on startup
         self.websocket_client.connect_to_backend()
@@ -107,10 +113,10 @@ class MainWindowController(QMainWindow):
         header_layout = QHBoxLayout()
         header_layout.setSpacing(10)  # Improved spacing between elements
 
-        # Left side: Connection status (clickable when disconnected)
+                # Left side: Connection status (clickable when disconnected)
         self.status_label = QLabel("Connecting...")
         self.status_label.setStyleSheet(
-            "color: orange; font-weight: bold; font-size: 11px; padding: 5px;"
+            "color: orange; font-weight: bold; padding: 5px;"
         )
         self.status_label.mousePressEvent = self._on_status_label_clicked
         header_layout.addWidget(self.status_label)
@@ -126,7 +132,7 @@ class MainWindowController(QMainWindow):
         # Chat display - optimized for streaming with markdown support
         self.chat_display = QTextEdit()
         self.chat_display.setReadOnly(True)
-        self._apply_chat_font()  # Apply font from configuration
+        # Font will be applied after full initialization in apply_font_config()
         # Enable HTML/rich text for markdown rendering
         self.chat_display.setAcceptRichText(True)
         layout.addWidget(self.chat_display)
@@ -153,36 +159,46 @@ class MainWindowController(QMainWindow):
         # Update icon themes
         self._update_icon_themes()
 
-        # Apply UI fonts
-        self._apply_ui_font()
-
     def _apply_chat_font(self) -> None:
-        """Apply chat font from configuration"""
+        """Apply chat font from configuration using font manager"""
         font_config = self.config_manager.get_font_config()
-        chat_font = QFont(
+        chat_font = self.font_manager.get_chat_font(
             font_config["chat_font_family"],
             font_config["chat_font_size"]
         )
+        # Apply chat font to chat display and message input for consistent typing experience
         self.chat_display.setFont(chat_font)
+        self.message_input.setFont(chat_font)
 
-    def _apply_ui_font(self) -> None:
-        """Apply UI font from configuration"""
-        font_config = self.config_manager.get_font_config()
-        ui_font = QFont(
-            font_config["ui_font_family"],
-            font_config["ui_font_size"]
+        # Force update the placeholder text styling by temporarily clearing and resetting it
+        placeholder_text = self.message_input.placeholderText()
+        if placeholder_text:
+            self.message_input.setPlaceholderText("")
+            self.message_input.setPlaceholderText(placeholder_text)
+
+        self.logger.debug(
+            "Chat font applied to chat elements",
+            ui_event="chat_font_applied",
+            module=__name__,
+            font_family=font_config["chat_font_family"],
+            font_size=font_config["chat_font_size"],
+            elements=["chat_display", "message_input", "placeholder_text"],
         )
-        # Apply to various UI elements
-        self.message_input.setFont(ui_font)
-        self.status_label.setFont(ui_font)
 
     def apply_font_config(self) -> None:
-        """Apply complete font configuration - called from settings"""
+        """Apply chat font configuration"""
+        font_config = self.config_manager.get_font_config()
+        self.logger.info(
+            "Applying font configuration",
+            ui_event="font_config_applying",
+            module=__name__,
+            chat_font=f"{font_config['chat_font_family']} {font_config['chat_font_size']}pt",
+        )
+
         self._apply_chat_font()
-        self._apply_ui_font()
 
         self.logger.info(
-            "Font configuration applied",
+            "Font configuration applied successfully",
             ui_event="font_config_applied",
             module=__name__,
         )
@@ -405,7 +421,7 @@ class MainWindowController(QMainWindow):
             )
             self.send_icon_button.setEnabled(False)
 
-    def _on_status_label_clicked(self, ev) -> None:
+    def _on_status_label_clicked(self, ev: Any) -> None:
         """Handle status label click for manual reconnection"""
         if not self.websocket_client.is_connected:
             self.logger.info(
@@ -600,6 +616,10 @@ class MainWindowController(QMainWindow):
         )
 
         self.websocket_client.cleanup()
+
+        # Cleanup font manager
+        self.font_manager.cleanup()
+
         event.accept()
 
 

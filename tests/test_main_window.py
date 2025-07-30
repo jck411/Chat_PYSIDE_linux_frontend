@@ -191,21 +191,8 @@ class TestMainWindowController:
         mock_websocket_client.is_connected = False
         main_window._on_connection_status_changed(False)
 
-        # Create a mock mouse event
-        from PySide6.QtCore import QPointF, Qt
-        from PySide6.QtGui import QMouseEvent
-
-        mock_event = QMouseEvent(
-            QMouseEvent.Type.MouseButtonPress,
-            QPointF(0, 0),
-            QPointF(0, 0),
-            Qt.MouseButton.LeftButton,
-            Qt.MouseButton.LeftButton,
-            Qt.KeyboardModifier.NoModifier
-        )
-
         # Trigger click
-        main_window._on_status_label_clicked(mock_event)
+        main_window._on_status_label_clicked()
 
         # Verify reconnection was attempted
         mock_websocket_client.connect_to_backend.assert_called()

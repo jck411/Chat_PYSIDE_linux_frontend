@@ -11,7 +11,7 @@ Following PROJECT_RULES.md:
 from typing import Any
 
 import structlog
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -28,7 +28,27 @@ from ..themes import MaterialIconButton, ThemeMode, get_font_manager, get_theme_
 from ..ui import SettingsDialog, get_markdown_formatter
 from .websocket_client import OptimizedWebSocketClient
 
-# Import compiled resources
+
+class ClickableLabel(QLabel):
+    """A clickable QLabel that emits a clicked signal"""
+    clicked = Signal()
+
+    def mousePressEvent(self, event: Any) -> None:
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(event)
+
+
+class MainWindow(QMainWindow):
+    """
+    Main window controller that orchestrates the chat interface.
+
+    Following PROJECT_RULES.md:
+    - Real-time UI updates under 10ms
+    - Immediate chunk processing
+    - Optimized font management
+    - Signal-based architecture
+    """
 try:
     from .. import resources_rc
 except ImportError:
@@ -114,11 +134,11 @@ class MainWindowController(QMainWindow):
         header_layout.setSpacing(10)  # Improved spacing between elements
 
                 # Left side: Connection status (clickable when disconnected)
-        self.status_label = QLabel("Connecting...")
+        self.status_label = ClickableLabel("Connecting...")
         self.status_label.setStyleSheet(
             "color: orange; font-weight: bold; padding: 5px;"
         )
-        self.status_label.mousePressEvent = self._on_status_label_clicked
+        self.status_label.clicked.connect(self._on_status_label_clicked)
         header_layout.addWidget(self.status_label)
 
         # Spacer to push icons to the right
@@ -421,7 +441,7 @@ class MainWindowController(QMainWindow):
             )
             self.send_icon_button.setEnabled(False)
 
-    def _on_status_label_clicked(self, ev: Any) -> None:
+    def _on_status_label_clicked(self) -> None:
         """Handle status label click for manual reconnection"""
         if not self.websocket_client.is_connected:
             self.logger.info(

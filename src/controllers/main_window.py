@@ -341,7 +341,8 @@ class MainWindowController(QMainWindow):
         model_display = model_name or "Assistant"
 
         # Add assistant response header with model name and proper spacing
-        header_html = f"<strong>🤖 {model_display}:</strong><br>"
+        # Use a smaller vertical space than <br><br> by using CSS margin
+        header_html = f'<strong>🤖 {model_display}:</strong><div style="margin-top:0.5em;"></div>'
         cursor = self.chat_display.textCursor()
         cursor.movePosition(QTextCursor.MoveOperation.End)
         cursor.insertHtml(header_html)

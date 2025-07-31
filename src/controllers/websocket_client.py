@@ -325,20 +325,39 @@ class OptimizedWebSocketClient(QObject):
                                 self._track_chunk_performance(start_time)
 
                         elif status == "complete":
-                            self.message_completed.emit(request_id, "")
-                            self.logger.info(
-                                "Response completed",
-                                stream_event="response_complete",
-                                module=__name__,
-                                request_id=request_id,
-                                provider=self.provider_config.get_current_provider().value,
-                            )
+                            # Check if this is a clear session response
+                            chunk = data.get("chunk", {})
+                            if chunk.get("type") == "session_cleared":
+                                # Handle clear session completion
+                                metadata = chunk.get("metadata", {})
+                                new_conversation_id = metadata.get("new_conversation_id", "")
+                                # Since backend doesn't provide old_conversation_id, we'll use empty string
+                                old_conversation_id = ""
+
+                                self.session_cleared.emit(new_conversation_id, old_conversation_id)
+                                self.logger.info(
+                                    "Session cleared successfully",
+                                    clear_event="session_cleared",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    new_conversation_id=new_conversation_id,
+                                )
+                            else:
+                                # Regular message completion
+                                self.message_completed.emit(request_id, "")
+                                self.logger.info(
+                                    "Response completed",
+                                    stream_event="response_complete",
+                                    module=__name__,
+                                    request_id=request_id,
+                                    provider=self.provider_config.get_current_provider().value,
+                                )
 
                         elif status == "error":
                             await self._handle_error_message(data, request_id)
 
                         elif status == "success":
-                            # Handle successful action responses (e.g., clear_session)
+                            # Handle successful action responses (legacy support)
                             action = data.get("action")
                             if action == "clear_session":
                                 session_data = data.get("data", {})
@@ -347,8 +366,8 @@ class OptimizedWebSocketClient(QObject):
 
                                 self.session_cleared.emit(new_conversation_id, old_conversation_id)
                                 self.logger.info(
-                                    "Session cleared successfully",
-                                    clear_event="session_cleared",
+                                    "Session cleared successfully (legacy)",
+                                    clear_event="session_cleared_legacy",
                                     module=__name__,
                                     request_id=request_id,
                                     new_conversation_id=new_conversation_id,

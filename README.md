@@ -18,7 +18,7 @@ uv venv
 uv sync
 
 # Run application
-uv run python src/app.py
+
 ```
 
 ## Configuration
@@ -53,7 +53,7 @@ uv run python src/app.py --host server.com --port 443 --ssl
 
 ## Project Structure
 
-```
+```uv run python src/app.py
 src/
 ├── app.py                    # Main application
 ├── config/                   # Configuration management

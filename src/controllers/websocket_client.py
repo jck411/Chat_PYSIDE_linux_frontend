@@ -44,6 +44,7 @@ class OptimizedWebSocketClient(QObject):
     error_occurred = Signal(str)
     provider_detected = Signal(str, str, str)  # provider, model, orchestrator
     session_cleared = Signal(str, str)  # new_conversation_id, old_conversation_id
+    conversation_history_loaded = Signal(list)  # list of history messages
 
     def __init__(self, websocket_url: str | None = None):
         super().__init__()
@@ -351,6 +352,19 @@ class OptimizedWebSocketClient(QObject):
                                     module=__name__,
                                     request_id=request_id,
                                     provider=self.provider_config.get_current_provider().value,
+                                )
+
+                        elif status == "init":
+                            # Handle conversation history loading
+                            chunk = data.get("chunk", {})
+                            if chunk.get("type") == "conversation_history":
+                                history_data = chunk.get("data", [])
+                                self.conversation_history_loaded.emit(history_data)
+                                self.logger.info(
+                                    "Conversation history loaded",
+                                    history_event="conversation_history_loaded",
+                                    module=__name__,
+                                    message_count=len(history_data),
                                 )
 
                         elif status == "error":

@@ -242,6 +242,7 @@ class MainWindowController(QMainWindow):
 
         # Session management
         self.websocket_client.session_cleared.connect(self._on_session_cleared)
+        self.websocket_client.conversation_history_loaded.connect(self._on_conversation_history_loaded)
 
     def _setup_theme_signals(self) -> None:
         """Connect theme manager signals for real-time theme updates"""
@@ -572,6 +573,64 @@ class MainWindowController(QMainWindow):
             module=__name__,
             new_conversation_id=new_conversation_id,
             old_conversation_id=old_conversation_id,
+        )
+
+    def _on_conversation_history_loaded(self, history_messages: list) -> None:
+        """Handle conversation history loaded from backend on reconnection"""
+        if not history_messages:
+            self.logger.info(
+                "No conversation history to load",
+                history_event="no_history_to_load",
+                module=__name__,
+            )
+            return
+
+        self.logger.info(
+            "Loading conversation history into UI",
+            history_event="loading_history_ui",
+            module=__name__,
+            message_count=len(history_messages),
+        )
+
+        # Clear the display first
+        self.chat_display.clear()
+
+        # Display each message from the history
+        for msg in history_messages:
+            role = msg.get("role", "")
+            content = msg.get("content", "")
+            
+            if role == "user":
+                # Display user message
+                user_html = f"<strong>👤 You:</strong> {content}<br><br>"
+                cursor = self.chat_display.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                cursor.insertHtml(user_html)
+                
+            elif role == "assistant":
+                # Display assistant message with markdown formatting
+                provider_info = self.websocket_client.get_provider_info()
+                model_name = provider_info.get("model", "Assistant")
+                model_display = model_name or "Assistant"
+                
+                header_html = f'<strong>🤖 {model_display}:</strong><div style="margin-top:0.5em;"></div>'
+                
+                # Format the content as markdown
+                html_content = self.markdown_formatter.format_message(content)
+                
+                cursor = self.chat_display.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                cursor.insertHtml(header_html + html_content + "<br>")
+
+        # Auto-scroll to bottom to show most recent messages
+        scrollbar = self.chat_display.verticalScrollBar()
+        scrollbar.setValue(scrollbar.maximum())
+
+        self.logger.info(
+            "Conversation history loaded successfully",
+            history_event="history_loaded_ui_complete",
+            module=__name__,
+            messages_loaded=len(history_messages),
         )
 
     def _open_settings(self) -> None:

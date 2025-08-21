@@ -325,15 +325,14 @@ class OptimizedWebSocketClient(QObject):
                                 # Performance monitoring
                                 self._track_chunk_performance(start_time)
 
-                        elif status == "complete":
+                        elif status == "completed":
                             # Check if this is a clear session response
                             chunk = data.get("chunk", {})
                             if chunk.get("type") == "session_cleared":
                                 # Handle clear session completion
                                 metadata = chunk.get("metadata", {})
                                 new_conversation_id = metadata.get("new_conversation_id", "")
-                                # Since backend doesn't provide old_conversation_id, we'll use empty string
-                                old_conversation_id = ""
+                                old_conversation_id = metadata.get("old_conversation_id", "")
 
                                 self.session_cleared.emit(new_conversation_id, old_conversation_id)
                                 self.logger.info(
@@ -342,6 +341,7 @@ class OptimizedWebSocketClient(QObject):
                                     module=__name__,
                                     request_id=request_id,
                                     new_conversation_id=new_conversation_id,
+                                    old_conversation_id=old_conversation_id,
                                 )
                             else:
                                 # Regular message completion

@@ -581,8 +581,13 @@ class MainWindowController(QMainWindow):
         # Clear the chat display completely
         self.chat_display.clear()
 
-        # Brief notice in chat
+        # Brief notice in chat for 1 second
         self.chat_display.append("Full wipe")
+        self.chat_display.repaint()  # Force immediate display
+
+        # Use QTimer.singleShot for 1 second delay, then clear
+        from PySide6.QtCore import QTimer
+        QTimer.singleShot(1000, self.chat_display.clear)
 
         # Reset streaming state
         self._is_streaming = False

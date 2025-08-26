@@ -38,12 +38,14 @@ class TestOptimizedWebSocketClientModule:
         assert hasattr(OptimizedWebSocketClient, "connection_status_changed")
         assert hasattr(OptimizedWebSocketClient, "error_occurred")
         assert hasattr(OptimizedWebSocketClient, "session_cleared")
+        assert hasattr(OptimizedWebSocketClient, "full_wipe_occurred")
 
         # Verify they are Signal instances
         assert isinstance(OptimizedWebSocketClient.chunk_received, Signal)
         assert isinstance(OptimizedWebSocketClient.message_started, Signal)
         assert isinstance(OptimizedWebSocketClient.message_completed, Signal)
         assert isinstance(OptimizedWebSocketClient.session_cleared, Signal)
+        assert isinstance(OptimizedWebSocketClient.full_wipe_occurred, Signal)
 
     def test_websocket_client_has_required_methods(self):
         """Test that WebSocket client class has required methods."""

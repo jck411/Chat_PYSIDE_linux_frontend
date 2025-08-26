@@ -44,6 +44,7 @@ class OptimizedWebSocketClient(QObject):
     error_occurred = Signal(str)
     provider_detected = Signal(str, str, str)  # provider, model, orchestrator
     session_cleared = Signal(str, str)  # new_conversation_id, old_conversation_id
+    full_wipe_occurred = Signal(str, str)  # new_conversation_id, old_conversation_id
     conversation_history_loaded = Signal(list)  # list of history messages
 
     def __init__(self, websocket_url: str | None = None):
@@ -333,16 +334,30 @@ class OptimizedWebSocketClient(QObject):
                                 metadata = chunk.get("metadata", {})
                                 new_conversation_id = metadata.get("new_conversation_id", "")
                                 old_conversation_id = metadata.get("old_conversation_id", "")
+                                full_wipe_occurred = metadata.get("full_wipe_occurred", False)
 
-                                self.session_cleared.emit(new_conversation_id, old_conversation_id)
-                                self.logger.info(
-                                    "Session cleared successfully",
-                                    clear_event="session_cleared",
-                                    module=__name__,
-                                    request_id=request_id,
-                                    new_conversation_id=new_conversation_id,
-                                    old_conversation_id=old_conversation_id,
-                                )
+                                if full_wipe_occurred:
+                                    # Emit full wipe signal
+                                    self.full_wipe_occurred.emit(new_conversation_id, old_conversation_id)
+                                    self.logger.info(
+                                        "Full wipe occurred during session clear",
+                                        clear_event="full_wipe_occurred",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        new_conversation_id=new_conversation_id,
+                                        old_conversation_id=old_conversation_id,
+                                    )
+                                else:
+                                    # Regular session clear
+                                    self.session_cleared.emit(new_conversation_id, old_conversation_id)
+                                    self.logger.info(
+                                        "Session cleared successfully",
+                                        clear_event="session_cleared",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        new_conversation_id=new_conversation_id,
+                                        old_conversation_id=old_conversation_id,
+                                    )
                             else:
                                 # Regular message completion
                                 self.message_completed.emit(request_id, "")
@@ -377,16 +392,30 @@ class OptimizedWebSocketClient(QObject):
                                 session_data = data.get("data", {})
                                 new_conversation_id = session_data.get("new_conversation_id", "")
                                 old_conversation_id = session_data.get("old_conversation_id", "")
+                                full_wipe_occurred = session_data.get("full_wipe_occurred", False)
 
-                                self.session_cleared.emit(new_conversation_id, old_conversation_id)
-                                self.logger.info(
-                                    "Session cleared successfully (legacy)",
-                                    clear_event="session_cleared_legacy",
-                                    module=__name__,
-                                    request_id=request_id,
-                                    new_conversation_id=new_conversation_id,
-                                    old_conversation_id=old_conversation_id,
-                                )
+                                if full_wipe_occurred:
+                                    # Emit full wipe signal for legacy format
+                                    self.full_wipe_occurred.emit(new_conversation_id, old_conversation_id)
+                                    self.logger.info(
+                                        "Full wipe occurred during session clear (legacy)",
+                                        clear_event="full_wipe_occurred_legacy",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        new_conversation_id=new_conversation_id,
+                                        old_conversation_id=old_conversation_id,
+                                    )
+                                else:
+                                    # Regular session clear for legacy format
+                                    self.session_cleared.emit(new_conversation_id, old_conversation_id)
+                                    self.logger.info(
+                                        "Session cleared successfully (legacy)",
+                                        clear_event="session_cleared_legacy",
+                                        module=__name__,
+                                        request_id=request_id,
+                                        new_conversation_id=new_conversation_id,
+                                        old_conversation_id=old_conversation_id,
+                                    )
 
                     else:
                         self.logger.warning(

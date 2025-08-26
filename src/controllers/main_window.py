@@ -242,6 +242,7 @@ class MainWindowController(QMainWindow):
 
         # Session management
         self.websocket_client.session_cleared.connect(self._on_session_cleared)
+        self.websocket_client.full_wipe_occurred.connect(self._on_full_wipe_occurred)
         self.websocket_client.conversation_history_loaded.connect(self._on_conversation_history_loaded)
 
     def _setup_theme_signals(self) -> None:
@@ -575,6 +576,28 @@ class MainWindowController(QMainWindow):
             old_conversation_id=old_conversation_id,
         )
 
+    def _on_full_wipe_occurred(self, new_conversation_id: str, old_conversation_id: str) -> None:
+        """Handle full wipe notification from backend"""
+        # Clear the chat display completely
+        self.chat_display.clear()
+
+        # Brief notice in chat
+        self.chat_display.append("Full wipe")
+
+        # Reset streaming state
+        self._is_streaming = False
+        self._streaming_content = ""
+        self._current_message_id = None
+        self._current_message_start = 0
+
+        self.logger.info(
+            "Full wipe occurred",
+            session_event="full_wipe_ui_notification",
+            module=__name__,
+            new_conversation_id=new_conversation_id,
+            old_conversation_id=old_conversation_id,
+        )
+
     def _on_conversation_history_loaded(self, history_messages: list) -> None:
         """Handle conversation history loaded from backend on reconnection"""
         if not history_messages:
@@ -599,25 +622,25 @@ class MainWindowController(QMainWindow):
         for msg in history_messages:
             role = msg.get("role", "")
             content = msg.get("content", "")
-            
+
             if role == "user":
                 # Display user message
                 user_html = f"<strong>👤 You:</strong> {content}<br><br>"
                 cursor = self.chat_display.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.End)
                 cursor.insertHtml(user_html)
-                
+
             elif role == "assistant":
                 # Display assistant message with markdown formatting
                 provider_info = self.websocket_client.get_provider_info()
                 model_name = provider_info.get("model", "Assistant")
                 model_display = model_name or "Assistant"
-                
+
                 header_html = f'<strong>🤖 {model_display}:</strong><div style="margin-top:0.5em;"></div>'
-                
+
                 # Format the content as markdown
                 html_content = self.markdown_formatter.format_message(content)
-                
+
                 cursor = self.chat_display.textCursor()
                 cursor.movePosition(QTextCursor.MoveOperation.End)
                 cursor.insertHtml(header_html + html_content + "<br>")

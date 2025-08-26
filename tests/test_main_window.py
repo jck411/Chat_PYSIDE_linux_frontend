@@ -126,6 +126,29 @@ class TestMainWindowController:
         assert main_window._current_message_id is None
         assert main_window._current_message_start == 0
 
+    def test_on_full_wipe_occurred(self, main_window, mock_websocket_client):
+        """Test full wipe handler."""
+        # Set up some chat state first
+        main_window.chat_display.setPlainText("Previous chat content")
+        main_window._is_streaming = True
+        main_window._streaming_content = "Some content"
+        main_window._current_message_id = "msg-123"
+        main_window._current_message_start = 100
+
+        # Trigger full wipe
+        main_window._on_full_wipe_occurred("new-conv-789", "old-conv-456")
+
+        # Verify chat display was cleared
+        assert main_window.chat_display.toPlainText() == ""
+
+        # Verify streaming state was reset
+        assert main_window._is_streaming is False
+        assert main_window._streaming_content == ""
+        assert main_window._current_message_id is None
+        assert main_window._current_message_start == 0
+
+        # Note: Popup testing would require mocking QMessageBox
+
     def test_on_message_started(self, main_window, mock_websocket_client):
         """Test message started handler."""
         test_message_id = "msg-123"

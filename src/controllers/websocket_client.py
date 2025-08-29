@@ -43,6 +43,7 @@ class OptimizedWebSocketClient(QObject):
     connection_status_changed = Signal(bool)
     error_occurred = Signal(str)
     provider_detected = Signal(str, str, str)  # provider, model, orchestrator
+    provider_model_updated = Signal(str, str)  # provider, model (from direct metadata)
     session_cleared = Signal(str, str)  # new_conversation_id, old_conversation_id
     full_wipe_occurred = Signal(str, str)  # new_conversation_id, old_conversation_id
     conversation_history_loaded = Signal(list)  # list of history messages
@@ -75,6 +76,10 @@ class OptimizedWebSocketClient(QObject):
         # Performance monitoring
         self._chunk_times: list[float] = []
         self._last_chunk_time: float | None = None
+
+        # Current provider/model info from direct metadata
+        self._current_provider: str = ""
+        self._current_model: str = ""
 
         # Start the background event loop
         self._start_background_loop()
@@ -305,13 +310,34 @@ class OptimizedWebSocketClient(QObject):
                             if chunk is not None and chunk.get("type") == "text":
                                 chunk_content = chunk.get("data", "")
 
-                                # Extract provider info from chunk metadata if available
+                                # Extract provider and model from chunk metadata (new backend format)
                                 metadata = chunk.get("metadata")
-                                if metadata and "provider_info" in metadata:
-                                    provider_info = metadata["provider_info"]
-                                    self.provider_config.update_provider_info(
-                                        provider_info
-                                    )
+                                if metadata:
+                                    # Check for direct provider/model fields in metadata
+                                    provider = metadata.get("provider")
+                                    model = metadata.get("model")
+
+                                    # Update current provider/model if present
+                                    if provider and model:
+                                        if provider != self._current_provider or model != self._current_model:
+                                            self._current_provider = provider
+                                            self._current_model = model
+                                            self.provider_model_updated.emit(provider, model)
+
+                                            self.logger.info(
+                                                "Provider/model updated from chunk metadata",
+                                                provider_event="provider_model_chunk_update",
+                                                module=__name__,
+                                                provider=provider,
+                                                model=model,
+                                            )
+
+                                    # Legacy provider_info support
+                                    if "provider_info" in metadata:
+                                        provider_info = metadata["provider_info"]
+                                        self.provider_config.update_provider_info(
+                                            provider_info
+                                        )
 
                                 # Apply provider-specific chunk processing
                                 optimizations = self.provider_config.get_optimizations()
@@ -374,6 +400,27 @@ class OptimizedWebSocketClient(QObject):
                             chunk = data.get("chunk", {})
                             if chunk.get("type") == "conversation_history":
                                 history_data = chunk.get("data", [])
+
+                                # Extract provider/model from init metadata (new backend format)
+                                metadata = chunk.get("metadata", {})
+                                provider = metadata.get("provider")
+                                model = metadata.get("model")
+
+                                # Update current provider/model if present
+                                if provider and model:
+                                    if provider != self._current_provider or model != self._current_model:
+                                        self._current_provider = provider
+                                        self._current_model = model
+                                        self.provider_model_updated.emit(provider, model)
+
+                                        self.logger.info(
+                                            "Provider/model updated from history metadata",
+                                            provider_event="provider_model_history_update",
+                                            module=__name__,
+                                            provider=provider,
+                                            model=model,
+                                        )
+
                                 self.conversation_history_loaded.emit(history_data)
                                 self.logger.info(
                                     "Conversation history loaded",
@@ -687,10 +734,18 @@ class OptimizedWebSocketClient(QObject):
     def get_provider_info(self) -> dict[str, str]:
         """Get current provider information"""
         return {
-            "provider": self.provider_config.get_current_provider().value,
-            "model": self.provider_config.get_current_model() or "",
+            "provider": self._current_provider or self.provider_config.get_current_provider().value,
+            "model": self._current_model or self.provider_config.get_current_model() or "",
             "orchestrator": self.provider_config.get_current_orchestrator() or "",
         }
+
+    def get_current_provider(self) -> str:
+        """Get current provider name from direct metadata"""
+        return self._current_provider
+
+    def get_current_model(self) -> str:
+        """Get current model name from direct metadata"""
+        return self._current_model
 
     def get_provider_summary(self) -> dict:
         """Get detailed provider configuration summary"""

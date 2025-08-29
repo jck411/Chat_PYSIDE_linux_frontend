@@ -240,6 +240,9 @@ class MainWindowController(QMainWindow):
         # Provider detection for automatic optimizations
         self.websocket_client.provider_detected.connect(self._on_provider_detected)
 
+        # Provider/model updates from direct metadata
+        self.websocket_client.provider_model_updated.connect(self._on_provider_model_updated)
+
         # Session management
         self.websocket_client.session_cleared.connect(self._on_session_cleared)
         self.websocket_client.full_wipe_occurred.connect(self._on_full_wipe_occurred)
@@ -351,12 +354,15 @@ class MainWindowController(QMainWindow):
         self._is_streaming = True
         self._streaming_content = ""  # Reset content buffer
 
-        # Get current model info for display
-        provider_info = self.websocket_client.get_provider_info()
-        model_name = provider_info.get("model", "Assistant")
+        # Get current model info for display - prioritize direct metadata
+        current_model = self.websocket_client.get_current_model()
+        if not current_model:
+            # Fallback to provider_info if direct metadata not available
+            provider_info = self.websocket_client.get_provider_info()
+            current_model = provider_info.get("model", "Assistant")
 
         # Use full model name without truncation
-        model_display = model_name or "Assistant"
+        model_display = current_model or "Assistant"
 
         # Add assistant response header with model name and proper spacing
         # Use a smaller vertical space than <br><br> by using CSS margin
@@ -373,6 +379,7 @@ class MainWindowController(QMainWindow):
             stream_event="message_start_ui",
             module=__name__,
             message_id=message_id,
+            model_display=model_display,
         )
 
     def _on_chunk_received(self, chunk: str) -> None:
@@ -546,6 +553,22 @@ class MainWindowController(QMainWindow):
                 max_retries=optimizations.get("max_retries"),
             )
 
+    def _on_provider_model_updated(self, provider: str, model: str) -> None:
+        """Handle direct provider/model updates from chunk metadata"""
+        self.logger.info(
+            "Provider/model updated from metadata",
+            provider_event="provider_model_updated",
+            module=__name__,
+            provider=provider,
+            model=model,
+        )
+
+        # Update status label with current provider and model
+        if self.websocket_client.is_connected:
+            status_message = f"Connected ({provider} • {model})"
+            self.status_label.setText(status_message)
+            self.status_label.setStyleSheet("color: green; font-weight: bold;")
+
     def _clear_session(self) -> None:
         """Clear the current chat session and reset conversation"""
         # Send clear session request to backend
@@ -623,6 +646,15 @@ class MainWindowController(QMainWindow):
         # Clear the display first
         self.chat_display.clear()
 
+        # Get current model info for display - prioritize direct metadata
+        current_model = self.websocket_client.get_current_model()
+        if not current_model:
+            # Fallback to provider_info if direct metadata not available
+            provider_info = self.websocket_client.get_provider_info()
+            current_model = provider_info.get("model", "Assistant")
+
+        model_display = current_model or "Assistant"
+
         # Display each message from the history
         for msg in history_messages:
             role = msg.get("role", "")
@@ -636,11 +668,7 @@ class MainWindowController(QMainWindow):
                 cursor.insertHtml(user_html)
 
             elif role == "assistant":
-                # Display assistant message with markdown formatting
-                provider_info = self.websocket_client.get_provider_info()
-                model_name = provider_info.get("model", "Assistant")
-                model_display = model_name or "Assistant"
-
+                # Display assistant message with markdown formatting using current model name
                 header_html = f'<strong>🤖 {model_display}:</strong><div style="margin-top:0.5em;"></div>'
 
                 # Format the content as markdown
@@ -659,6 +687,7 @@ class MainWindowController(QMainWindow):
             history_event="history_loaded_ui_complete",
             module=__name__,
             messages_loaded=len(history_messages),
+            model_display=model_display,
         )
 
     def _open_settings(self) -> None:
